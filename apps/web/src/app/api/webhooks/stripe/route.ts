@@ -40,6 +40,11 @@ export async function POST(req: NextRequest) {
             await handlePaymentFailed(paymentIntent);
             break;
         }
+        case 'account.updated': {
+            const account = event.data.object as Stripe.Account;
+            await handleAccountUpdated(account);
+            break;
+        }
         default:
             console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
     }
@@ -233,3 +238,78 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
     }
 }
 
+/**
+ * Handle Stripe Connect account updates
+ * Updates cleaner verification status based on charges_enabled/payouts_enabled
+ */
+async function handleAccountUpdated(account: Stripe.Account) {
+    const accountId = account.id;
+
+    console.log(`[Webhook] Account updated: ${accountId}`);
+    console.log(`[Webhook] charges_enabled: ${account.charges_enabled}, payouts_enabled: ${account.payouts_enabled}`);
+
+    // Find cleaner by stripeAccountId
+    const cleaner = await prisma.cleanerProfile.findFirst({
+        where: { stripeAccountId: accountId },
+        include: { user: true },
+    });
+
+    if (!cleaner) {
+        console.log(`[Webhook] No cleaner found for account ${accountId}`);
+        return;
+    }
+
+    // Determine new status
+    const isFullyVerified = account.charges_enabled && account.payouts_enabled;
+    const newStatus = isFullyVerified ? 'APPROVED' : 'PENDING';
+
+    // Update cleaner profile
+    await prisma.cleanerProfile.update({
+        where: { id: cleaner.id },
+        data: {
+            verificationStatus: newStatus,
+            // Also update main status if fully verified
+            ...(isFullyVerified && { status: 'ACTIVE' }),
+        },
+    });
+
+    console.log(`[Webhook] Updated cleaner ${cleaner.id} verification status to ${newStatus}`);
+
+    // Send notification if just approved
+    if (isFullyVerified && cleaner.verificationStatus !== 'APPROVED') {
+        try {
+            await sendEmailNotification(cleaner.userId, {
+                to: cleaner.user.email,
+                subject: '🎉 Your Stripe Account is Verified! | Fixelo',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h1 style="color: #22c55e;">Congratulations! You're All Set 🎉</h1>
+                        <p>Hi ${cleaner.user.firstName || 'there'},</p>
+                        <p>Great news! Your Stripe account has been verified and you can now receive payments for cleaning jobs.</p>
+                        
+                        <div style="background-color: #f0fdf4; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                            <p style="margin: 0; color: #166534;"><strong>✔ Verification Complete</strong></p>
+                            <p style="margin: 10px 0 0 0; color: #166534;">You're ready to accept jobs and get paid!</p>
+                        </div>
+                        
+                        <p style="text-align: center; margin: 30px 0;">
+                            <a href="${process.env.NEXT_PUBLIC_APP_URL}/cleaner/dashboard" 
+                               style="background-color: #2563eb; color: white; padding: 12px 24px; 
+                                      text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                Go to Dashboard
+                            </a>
+                        </p>
+                        
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+                        <p style="color: #999; font-size: 12px;">
+                            © ${new Date().getFullYear()} Fixelo. All rights reserved.
+                        </p>
+                    </div>
+                `,
+            }, { type: 'STRIPE_VERIFIED' });
+            console.log(`[Webhook] Sent verification success email to ${cleaner.user.email}`);
+        } catch (err) {
+            console.error(`[Webhook] Failed to send verification email:`, err);
+        }
+    }
+}

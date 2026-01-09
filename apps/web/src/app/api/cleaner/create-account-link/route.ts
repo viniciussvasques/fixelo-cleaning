@@ -30,6 +30,7 @@ export async function POST(_req: Request) {
                 country: 'US',
                 email: session.user.email,
                 capabilities: {
+                    card_payments: { requested: true },
                     transfers: { requested: true },
                 },
                 business_type: 'individual',
