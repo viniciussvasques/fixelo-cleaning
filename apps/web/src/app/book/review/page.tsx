@@ -8,13 +8,8 @@ import { useBookingStore } from '@/store/booking';
 import { ServiceType, AddOn } from '@prisma/client';
 import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
+import { StripeProvider } from '@/components/providers/StripeProvider';
 import CheckoutForm from '@/components/checkout/CheckoutForm';
-
-// Make sure to call loadStripe outside of a component’s render to avoid
-// recreating the Stripe object on every render.
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 export default function ReviewPage() {
     const router = useRouter();
@@ -98,19 +93,6 @@ export default function ReviewPage() {
             </div>
         );
     }
-
-    const appearance = {
-        theme: 'stripe',
-        variables: {
-            colorPrimary: '#2563eb',
-        },
-    } as const;
-
-    const options = {
-        clientSecret,
-        appearance,
-    };
-
     return (
         <div className="min-h-screen bg-gray-50 py-12">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -228,9 +210,9 @@ export default function ReviewPage() {
                         <div className="bg-white rounded-lg shadow-md p-6">
                             <h2 className="text-xl font-bold text-gray-900 mb-6">Payment Details</h2>
                             {clientSecret && (
-                                <Elements options={options} stripe={stripePromise}>
+                                <StripeProvider clientSecret={clientSecret}>
                                     <CheckoutForm amount={calculatedPrice} />
-                                </Elements>
+                                </StripeProvider>
                             )}
                         </div>
                         <div className="mt-6 text-center text-sm text-gray-500">
