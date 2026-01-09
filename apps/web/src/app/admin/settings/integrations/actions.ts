@@ -12,8 +12,15 @@ const INTEGRATION_KEYS = [
     'twilio_account_sid',
     'twilio_auth_token',
     'twilio_phone_number',
-    'resend_api_key',
+    // SMTP email
+    'smtp_host',
+    'smtp_port',
+    'smtp_user',
+    'smtp_password',
     'email_from',
+    // Resend
+    'resend_api_key',
+    // Push
     'vapid_public_key',
     'vapid_private_key',
 ] as const;
@@ -21,7 +28,7 @@ const INTEGRATION_KEYS = [
 type IntegrationKey = typeof INTEGRATION_KEYS[number];
 
 // Mask sensitive values for display
-function maskValue(value: string | null, type: 'key' | 'token' | 'phone' | 'email'): string {
+function maskValue(value: string | null, type: 'key' | 'token' | 'phone' | 'email' | 'text'): string {
     if (!value) return '';
 
     switch (type) {
@@ -34,7 +41,8 @@ function maskValue(value: string | null, type: 'key' | 'token' | 'phone' | 'emai
             if (value.length <= 4) return '••••••••';
             return `${value.slice(0, 4)}••••${value.slice(-2)}`;
         case 'email':
-            return value; // Emails don't need masking
+        case 'text':
+            return value; // Don't mask these
         default:
             return '••••••••';
     }
@@ -65,10 +73,11 @@ export async function getIntegrationConfigs() {
         const key = config.key as IntegrationKey;
         const value = config.value;
 
-        let maskType: 'key' | 'token' | 'phone' | 'email' = 'key';
-        if (key.includes('token') || key.includes('secret')) maskType = 'token';
+        let maskType: 'key' | 'token' | 'phone' | 'email' | 'text' = 'key';
+        if (key.includes('token') || key.includes('secret') || key.includes('password')) maskType = 'token';
         if (key.includes('phone')) maskType = 'phone';
         if (key.includes('email') || key === 'email_from') maskType = 'email';
+        if (key === 'smtp_host' || key === 'smtp_port' || key === 'smtp_user') maskType = 'text';
 
         configMap[key] = {
             value: '', // Don't send actual value to client
@@ -85,8 +94,12 @@ export async function getIntegrationConfigs() {
         twilio_account_sid: process.env.TWILIO_ACCOUNT_SID,
         twilio_auth_token: process.env.TWILIO_AUTH_TOKEN,
         twilio_phone_number: process.env.TWILIO_PHONE_NUMBER,
+        smtp_host: process.env.SMTP_HOST,
+        smtp_port: process.env.SMTP_PORT,
+        smtp_user: process.env.SMTP_USER,
+        smtp_password: process.env.SMTP_PASSWORD,
+        email_from: process.env.EMAIL_FROM || process.env.SMTP_FROM,
         resend_api_key: process.env.RESEND_API_KEY,
-        email_from: process.env.EMAIL_FROM,
         vapid_public_key: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
         vapid_private_key: process.env.VAPID_PRIVATE_KEY,
     };

@@ -125,7 +125,7 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
     // Check if any integration is configured
     const stripeConfigured = getConfig('stripe_secret_key').isSet && getConfig('stripe_publishable_key').isSet;
     const twilioConfigured = getConfig('twilio_account_sid').isSet && getConfig('twilio_auth_token').isSet;
-    const emailConfigured = getConfig('resend_api_key').isSet || getConfig('email_from').isSet;
+    const emailConfigured = getConfig('smtp_host').isSet || getConfig('resend_api_key').isSet;
     const pushConfigured = getConfig('vapid_public_key').isSet && getConfig('vapid_private_key').isSet;
 
     return (
@@ -324,22 +324,98 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
                                 <Mail className="w-6 h-6 text-blue-600" />
                             </div>
                             <div>
-                                <CardTitle>Email (Resend)</CardTitle>
-                                <CardDescription>Transactional emails using Resend API</CardDescription>
+                                <CardTitle>Email (SMTP / Resend)</CardTitle>
+                                <CardDescription>Send transactional emails using your own SMTP server or Resend API</CardDescription>
                             </div>
                         </div>
-                        <a
-                            href="https://resend.com/dashboard"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:underline flex items-center gap-1"
-                        >
-                            Dashboard <ExternalLink className="w-3 h-3" />
-                        </a>
                     </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2">
+                <CardContent className="space-y-6">
+                    {/* SMTP Section */}
+                    <div className="space-y-4">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                            📧 SMTP Server (Own Server)
+                            {getConfig('smtp_host').isSet && <Badge className="bg-green-100 text-green-800">Active</Badge>}
+                        </h4>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <IntegrationInput
+                                label="SMTP Host"
+                                configKey="smtp_host"
+                                placeholder="smtp.seuservidor.com"
+                                value={values.smtp_host || ''}
+                                maskedValue={getConfig('smtp_host').maskedValue}
+                                isSet={getConfig('smtp_host').isSet}
+                                onChange={handleChange}
+                                type="text"
+                            />
+                            <IntegrationInput
+                                label="SMTP Port"
+                                configKey="smtp_port"
+                                placeholder="587"
+                                value={values.smtp_port || ''}
+                                maskedValue={getConfig('smtp_port').maskedValue}
+                                isSet={getConfig('smtp_port').isSet}
+                                onChange={handleChange}
+                                type="text"
+                            />
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2">
+                            <IntegrationInput
+                                label="SMTP User"
+                                configKey="smtp_user"
+                                placeholder="user@seuservidor.com"
+                                value={values.smtp_user || ''}
+                                maskedValue={getConfig('smtp_user').maskedValue}
+                                isSet={getConfig('smtp_user').isSet}
+                                onChange={handleChange}
+                                type="text"
+                            />
+                            <IntegrationInput
+                                label="SMTP Password"
+                                configKey="smtp_password"
+                                placeholder="••••••••"
+                                value={values.smtp_password || ''}
+                                maskedValue={getConfig('smtp_password').maskedValue}
+                                isSet={getConfig('smtp_password').isSet}
+                                onChange={handleChange}
+                            />
+                        </div>
+                        <IntegrationInput
+                            label="From Email"
+                            configKey="email_from"
+                            placeholder="noreply@fixelo.app"
+                            value={values.email_from || ''}
+                            maskedValue={getConfig('email_from').maskedValue}
+                            isSet={getConfig('email_from').isSet}
+                            onChange={handleChange}
+                            type="text"
+                        />
+                    </div>
+
+                    {/* Divider */}
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-white px-2 text-muted-foreground">or use</span>
+                        </div>
+                    </div>
+
+                    {/* Resend Section */}
+                    <div className="space-y-4">
+                        <h4 className="font-medium text-sm flex items-center gap-2">
+                            ✨ Resend API
+                            {getConfig('resend_api_key').isSet && <Badge className="bg-green-100 text-green-800">Active</Badge>}
+                            <a
+                                href="https://resend.com/dashboard"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1 text-xs"
+                            >
+                                Dashboard <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </h4>
                         <IntegrationInput
                             label="Resend API Key"
                             configKey="resend_api_key"
@@ -348,16 +424,6 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
                             maskedValue={getConfig('resend_api_key').maskedValue}
                             isSet={getConfig('resend_api_key').isSet}
                             onChange={handleChange}
-                        />
-                        <IntegrationInput
-                            label="From Email"
-                            configKey="email_from"
-                            placeholder="noreply@yourdomain.com"
-                            value={values.email_from || ''}
-                            maskedValue={getConfig('email_from').maskedValue}
-                            isSet={getConfig('email_from').isSet}
-                            onChange={handleChange}
-                            type="text"
                         />
                     </div>
                 </CardContent>
