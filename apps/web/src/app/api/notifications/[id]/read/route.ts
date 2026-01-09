@@ -15,15 +15,15 @@ export async function POST(
     const notificationId = params.id;
 
     try {
-        // Update notification status to READ
+        // Update notification to mark as read (using deliveredAt as read timestamp)
         const notification = await prisma.notification.update({
             where: {
                 id: notificationId,
                 userId: session.user.id // Ensure user owns this notification
             },
             data: {
-                status: 'READ',
-                readAt: new Date()
+                status: 'DELIVERED',
+                deliveredAt: new Date()
             }
         });
 

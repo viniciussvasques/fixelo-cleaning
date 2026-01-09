@@ -21,50 +21,63 @@ export async function POST(request: Request) {
         const body = await request.json();
         const validatedData = contactSchema.parse(body);
 
-        // TODO: Send email via Resend when configured
-        // For now, log the contact form submission
-        console.log('Contact form submission:', {
-            name: validatedData.name,
-            email: validatedData.email,
-            subject: validatedData.subject,
-            message: validatedData.message,
-            timestamp: new Date().toISOString(),
+        // Send emails
+        const { sendEmail } = await import('@/lib/email');
+
+        // Send notification to support team
+        await sendEmail({
+            to: process.env.SUPPORT_EMAIL || 'support@fixelo.app',
+            subject: `[Contact Form] ${validatedData.subject}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h2 style="color: #2563eb;">New Contact Form Submission</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>From:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${validatedData.name}</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Email:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                                <a href="mailto:${validatedData.email}">${validatedData.email}</a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Subject:</strong></td>
+                            <td style="padding: 10px; border-bottom: 1px solid #eee;">${validatedData.subject}</td>
+                        </tr>
+                    </table>
+                    <h3 style="color: #333; margin-top: 20px;">Message:</h3>
+                    <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px;">
+                        ${validatedData.message.replace(/\n/g, '<br>')}
+                    </div>
+                    <p style="color: #999; font-size: 12px; margin-top: 20px;">
+                        Received at: ${new Date().toLocaleString()}
+                    </p>
+                </div>
+            `,
         });
 
-        // Example with Resend (uncomment when API key is configured):
-        /*
-        const { Resend } = await import('resend');
-        const resend = new Resend(process.env.RESEND_API_KEY);
-    
-        // Send notification to support team
-        await resend.emails.send({
-          from: 'Fixelo Contact <noreply@fixelo.com>',
-          to: 'support@fixelo.com',
-          subject: `Contact Form: ${validatedData.subject}`,
-          html: `
-            <h2>New Contact Form Submission</h2>
-            <p><strong>From:</strong> ${validatedData.name} (${validatedData.email})</p>
-            <p><strong>Subject:</strong> ${validatedData.subject}</p>
-            <p><strong>Message:</strong></p>
-            <p>${validatedData.message.replace(/\n/g, '<br>')}</p>
-          `,
-        });
-    
         // Send confirmation to user
-        await resend.emails.send({
-          from: 'Fixelo <noreply@fixelo.com>',
-          to: validatedData.email,
-          subject: 'We received your message',
-          html: `
-            <p>Hi ${validatedData.name},</p>
-            <p>Thank you for contacting Fixelo! We've received your message and will get back to you within 24 hours.</p>
-            <p>Your message regarding: "${validatedData.subject}"</p>
-            <br>
-            <p>Best regards,</p>
-            <p>The Fixelo Team</p>
-          `,
+        await sendEmail({
+            to: validatedData.email,
+            subject: 'We received your message - Fixelo',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #2563eb;">Thank You for Contacting Us!</h1>
+                    <p>Hi ${validatedData.name},</p>
+                    <p>We've received your message and our team will get back to you within 24 hours.</p>
+                    <p><strong>Your message regarding:</strong> "${validatedData.subject}"</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+                    <p>In the meantime, you can:</p>
+                    <ul>
+                        <li><a href="${process.env.NEXT_PUBLIC_APP_URL}/book">Book a cleaning</a></li>
+                        <li><a href="${process.env.NEXT_PUBLIC_APP_URL}/about">Learn more about us</a></li>
+                    </ul>
+                    <p>Best regards,<br/>The Fixelo Team</p>
+                </div>
+            `,
         });
-        */
 
         return NextResponse.json({
             success: true,

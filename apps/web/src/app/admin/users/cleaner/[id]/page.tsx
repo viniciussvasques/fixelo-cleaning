@@ -11,32 +11,83 @@ import {
     Linkedin, Instagram, FileText, Shield, User, Calendar
 } from "lucide-react";
 import { revalidatePath } from "next/cache";
+import { sendEmailNotification } from "@/lib/email";
+import { sendSMSNotification } from "@/lib/sms";
 
 async function approveCleaner(id: string) {
     'use server';
-    await prisma.cleanerProfile.update({
+    const cleaner = await prisma.cleanerProfile.update({
         where: { id },
         data: {
             status: CleanerStatus.ACTIVE,
             verificationStatus: 'APPROVED',
             reviewedAt: new Date(),
+        },
+        include: {
+            user: true,
         }
     });
+
+    // Send approval email
+    await sendEmailNotification(cleaner.userId, {
+        to: cleaner.user.email,
+        subject: '🎉 Welcome to Fixelo! Your Application is Approved',
+        html: `
+            <h1>Congratulations, ${cleaner.user.firstName}!</h1>
+            <p>Your application to join the Fixelo cleaning team has been <strong>approved</strong>!</p>
+            <p>You can now:</p>
+            <ul>
+                <li>✅ Set up your availability</li>
+                <li>✅ Start receiving job offers</li>
+                <li>✅ Connect your bank account for payouts</li>
+            </ul>
+            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/cleaner/dashboard">Go to your dashboard</a></p>
+            <p>Welcome aboard!<br/>The Fixelo Team</p>
+        `,
+    });
+
+    // Send approval SMS if phone available
+    if (cleaner.user.phone) {
+        await sendSMSNotification(
+            cleaner.userId,
+            cleaner.user.phone,
+            `🎉 ${cleaner.user.firstName}, you're approved! Welcome to Fixelo. Log in to start accepting jobs: ${process.env.NEXT_PUBLIC_APP_URL}/cleaner/dashboard`
+        );
+    }
+
     revalidatePath('/admin/users/cleaner');
     redirect('/admin/users/cleaner');
 }
 
 async function rejectCleaner(id: string, reason: string) {
     'use server';
-    await prisma.cleanerProfile.update({
+    const cleaner = await prisma.cleanerProfile.update({
         where: { id },
         data: {
             status: CleanerStatus.SUSPENDED,
             verificationStatus: 'REJECTED',
             rejectionReason: reason,
             reviewedAt: new Date(),
+        },
+        include: {
+            user: true,
         }
     });
+
+    // Send rejection email
+    await sendEmailNotification(cleaner.userId, {
+        to: cleaner.user.email,
+        subject: 'Fixelo Application Update',
+        html: `
+            <h1>Hello ${cleaner.user.firstName},</h1>
+            <p>Thank you for your interest in joining the Fixelo cleaning team.</p>
+            <p>After reviewing your application, we're unable to proceed at this time.</p>
+            <p><strong>Reason:</strong> ${reason}</p>
+            <p>If you believe this is an error or have additional documents to submit, please contact us at support@fixelo.app.</p>
+            <p>Best regards,<br/>The Fixelo Team</p>
+        `,
+    });
+
     revalidatePath('/admin/users/cleaner');
     redirect('/admin/users/cleaner');
 }

@@ -1,0 +1,43 @@
+{
+    "name": "Fixelo - Professional Home Cleaning",
+    "short_name": "Fixelo",
+    "description": "Book trusted, professional home cleaning services in Orlando, FL",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#2563eb",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/logo-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/logo-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ],
+    "categories": [
+        "lifestyle",
+        "utilities"
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Book a Cleaning",
+            "short_name": "Book",
+            "description": "Start booking a cleaning service",
+            "url": "/book",
+            "icons": [
+                {
+                    "src": "/logo-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
+    ]
+}

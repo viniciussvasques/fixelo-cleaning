@@ -42,19 +42,35 @@ export async function POST(request: Request) {
             // Send email with reset link
             const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`;
 
-            // TODO: Implement email sending with Resend
-            // For now, log the reset URL for development
-            console.log(`Password reset link for ${email}: ${resetUrl}`);
-
-            // Example with Resend (uncomment when configured):
-            // const { Resend } = await import('resend');
-            // const resend = new Resend(process.env.RESEND_API_KEY);
-            // await resend.emails.send({
-            //   from: 'Fixelo <noreply@fixelo.com>',
-            //   to: email,
-            //   subject: 'Reset your Fixelo password',
-            //   html: `<p>Hi ${user.firstName},</p><p>Click <a href="${resetUrl}">here</a> to reset your password.</p>`,
-            // });
+            // Send password reset email
+            const { sendEmail } = await import('@/lib/email');
+            await sendEmail({
+                to: email,
+                subject: 'Reset Your Fixelo Password',
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h1 style="color: #2563eb;">Reset Your Password</h1>
+                        <p>Hi ${user.firstName},</p>
+                        <p>We received a request to reset your Fixelo account password.</p>
+                        <p>Click the button below to create a new password:</p>
+                        <p style="text-align: center; margin: 30px 0;">
+                            <a href="${resetUrl}" 
+                               style="background-color: #2563eb; color: white; padding: 12px 24px; 
+                                      text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                Reset Password
+                            </a>
+                        </p>
+                        <p style="color: #666; font-size: 14px;">
+                            This link will expire in 1 hour. If you didn't request a password reset, 
+                            you can safely ignore this email.
+                        </p>
+                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+                        <p style="color: #999; font-size: 12px;">
+                            © ${new Date().getFullYear()} Fixelo. All rights reserved.
+                        </p>
+                    </div>
+                `,
+            });
         }
 
         // Always return success response
