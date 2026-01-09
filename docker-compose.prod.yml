@@ -80,15 +80,19 @@ services:
       dockerfile: Dockerfile
       target: builder
     container_name: fixelo-migrate
+    working_dir: /app
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-fixelo}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-fixelo_prod}
-    command: npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma
+    command: >
+      sh -c "npx prisma migrate deploy --schema=packages/database/prisma/schema.prisma && echo 'Migrations applied successfully'"
     depends_on:
       db:
         condition: service_healthy
     networks:
       - fixelo-network
     restart: "no"
+    profiles:
+      - migration
 
   # ============================================
   # Next.js Application
@@ -124,8 +128,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      migrate:
-        condition: service_completed_successfully
     networks:
       - fixelo-network
     labels:
