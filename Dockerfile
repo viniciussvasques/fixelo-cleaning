@@ -77,6 +77,9 @@ COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
+# Copy database dependencies for seed (tsx, bcryptjs)
+COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
+
 # Set ownership
 RUN chown -R nextjs:nodejs /app
 
