@@ -116,7 +116,7 @@ export function StripeProvider({ children, clientSecret, options }: StripeProvid
             rules: {
                 '.Input': {
                     border: '1px solid #e5e7eb',
-                    boxShadow: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
                 },
                 '.Input:focus': {
                     border: '1px solid #2563eb',
