@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // Output standalone for Docker production builds
+    output: 'standalone',
+
     // Ignore ESLint errors during production builds
     // This allows deployment even with non-critical warnings
     eslint: {
