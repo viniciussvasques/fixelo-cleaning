@@ -139,6 +139,64 @@ run_migrations() {
 }
 
 # =============================================
+# 5b. Run database seed (if empty)
+# =============================================
+run_seed() {
+    log "🌱 Checking if seed is needed..."
+    
+    # Check if ServiceType table has data
+    local count=$(docker compose -f "$COMPOSE_FILE" exec -T db psql -U fixelo -d fixelo_prod -t -c 'SELECT COUNT(*) FROM "ServiceType"' 2>/dev/null | tr -d ' ')
+    
+    if [ "$count" = "0" ] || [ -z "$count" ]; then
+        log "⏳ Database empty, running seed..."
+        
+        # Run seed using the web container which has prisma
+        docker compose -f "$COMPOSE_FILE" exec -T web sh -c 'cd /app && npx prisma db seed --schema=packages/database/prisma/schema.prisma' || {
+            warn "Prisma seed failed, trying direct SQL seed..."
+            # Fallback: insert basic data directly
+            docker compose -f "$COMPOSE_FILE" exec -T db psql -U fixelo -d fixelo_prod << 'SEEDSQL'
+INSERT INTO "ServiceType" (id, name, slug, description, "basePrice", inclusions, exclusions, "isActive", "createdAt", "updatedAt", "baseTime", "timePerBed", "timePerBath")
+SELECT gen_random_uuid(), 'Standard Cleaning', 'standard', 'Regular home cleaning service', 109, 
+       ARRAY['Dusting all surfaces', 'Vacuum all floors', 'Mop hard floors', 'Bathroom cleaning', 'Kitchen surface cleaning', 'Trash removal']::text[], 
+       ARRAY['Inside oven', 'Inside fridge']::text[], true, NOW(), NOW(), 120, 45, 30
+WHERE NOT EXISTS (SELECT 1 FROM "ServiceType" WHERE slug='standard');
+
+INSERT INTO "ServiceType" (id, name, slug, description, "basePrice", inclusions, exclusions, "isActive", "createdAt", "updatedAt", "baseTime", "timePerBed", "timePerBath")
+SELECT gen_random_uuid(), 'Deep Cleaning', 'deep', 'Thorough deep cleaning service', 169, 
+       ARRAY['Everything in Standard', 'Inside oven cleaning', 'Inside fridge cleaning', 'Baseboards', 'Cabinet exteriors']::text[], 
+       ARRAY[]::text[], true, NOW(), NOW(), 180, 60, 45
+WHERE NOT EXISTS (SELECT 1 FROM "ServiceType" WHERE slug='deep');
+
+INSERT INTO "ServiceType" (id, name, slug, description, "basePrice", inclusions, exclusions, "isActive", "createdAt", "updatedAt", "baseTime", "timePerBed", "timePerBath")
+SELECT gen_random_uuid(), 'Airbnb / Vacation Rental', 'airbnb', 'Turnover cleaning for vacation rentals', 129, 
+       ARRAY['Turnover cleaning', 'Bed linens change', 'Trash removal', 'Bathroom reset', 'Kitchen reset']::text[], 
+       ARRAY[]::text[], true, NOW(), NOW(), 90, 30, 20
+WHERE NOT EXISTS (SELECT 1 FROM "ServiceType" WHERE slug='airbnb');
+
+INSERT INTO "AddOn" (id, name, slug, description, price, "timeAdded", "isActive", "createdAt", "updatedAt")
+SELECT gen_random_uuid(), 'Inside Oven Cleaning', 'inside-oven', 'Deep clean inside oven', 25, 30, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM "AddOn" WHERE slug='inside-oven');
+
+INSERT INTO "AddOn" (id, name, slug, description, price, "timeAdded", "isActive", "createdAt", "updatedAt")
+SELECT gen_random_uuid(), 'Inside Fridge Cleaning', 'inside-fridge', 'Deep clean inside refrigerator', 25, 30, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM "AddOn" WHERE slug='inside-fridge');
+
+INSERT INTO "AddOn" (id, name, slug, description, price, "timeAdded", "isActive", "createdAt", "updatedAt")
+SELECT gen_random_uuid(), 'Eco-Friendly Products', 'eco-products', 'Use green cleaning products', 10, 0, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM "AddOn" WHERE slug='eco-products');
+
+INSERT INTO "AddOn" (id, name, slug, description, price, "timeAdded", "isActive", "createdAt", "updatedAt")
+SELECT gen_random_uuid(), 'Window Cleaning', 'window-cleaning', 'Interior window cleaning', 35, 45, true, NOW(), NOW()
+WHERE NOT EXISTS (SELECT 1 FROM "AddOn" WHERE slug='window-cleaning');
+SEEDSQL
+        }
+        log "✓ Database seeded"
+    else
+        log "✓ Database already has data ($count service types)"
+    fi
+}
+
+# =============================================
 # 6. Start/Update containers
 # =============================================
 start_containers() {
@@ -209,6 +267,7 @@ main() {
     build_images
     run_migrations
     start_containers
+    run_seed
     
     if health_check; then
         cleanup
