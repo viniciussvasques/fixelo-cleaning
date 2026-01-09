@@ -46,10 +46,16 @@ export async function GET() {
             },
         });
 
+        // Debug log to see what we're getting from database
+        console.log('[Config API] Found configs from DB:', configs.map(c => ({ key: c.key, valueLen: c.value?.length })));
+
         // Build config object with fallbacks to environment variables
+        const stripeKey = configs.find(c => c.key === 'stripe_publishable_key')?.value;
+        console.log('[Config API] Stripe key from DB:', stripeKey ? `${stripeKey.substring(0, 20)}... (${stripeKey.length} chars)` : 'NOT FOUND');
+
         const config: Record<string, string> = {
             stripePublishableKey:
-                configs.find(c => c.key === 'stripe_publishable_key')?.value ||
+                stripeKey ||
                 process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '',
             appUrl:
                 configs.find(c => c.key === 'next_public_app_url')?.value ||
