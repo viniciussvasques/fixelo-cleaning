@@ -15,7 +15,7 @@ services:
   # Traefik Reverse Proxy with SSL
   # ============================================
   traefik:
-    image: traefik:v3.3
+    image: traefik:latest
     container_name: fixelo-traefik
     restart: always
     command:
