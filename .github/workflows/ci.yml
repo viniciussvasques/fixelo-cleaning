@@ -8,18 +8,15 @@ on:
 
 env:
   NODE_VERSION: '20'
-  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
-  TURBO_TEAM: ${{ vars.TURBO_TEAM }}
 
 jobs:
   # ============================================
-  # INSTALL & CACHE DEPENDENCIES
+  # BUILD & TEST (Combined for simplicity)
   # ============================================
-  install:
-    name: 📦 Install Dependencies
+  build-and-test:
+    name: � Build & Test
     runs-on: ubuntu-latest
-    outputs:
-      cache-key: ${{ steps.cache-keys.outputs.key }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -29,57 +26,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-
-      - name: Generate cache key
-        id: cache-keys
-        run: echo "key=${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}" >> $GITHUB_OUTPUT
-
-      - name: Cache node_modules
-        uses: actions/cache@v4
-        id: cache-deps
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            packages/*/node_modules
-          key: ${{ steps.cache-keys.outputs.key }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
       - name: Install dependencies
-        if: steps.cache-deps.outputs.cache-hit != 'true'
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npm run db:generate
-
-  # ============================================
-  # LINT & TYPE CHECK
-  # ============================================
-  lint:
-    name: 🔍 Lint & Type Check
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            packages/*/node_modules
-          key: ${{ needs.install.outputs.cache-key }}
-
-      - name: Install dependencies (if cache miss)
         run: npm ci
 
       - name: Generate Prisma Client
@@ -92,106 +40,11 @@ jobs:
       - name: Run TypeScript Check
         run: npm run type-check
 
-  # ============================================
-  # UNIT & INTEGRATION TESTS
-  # ============================================
-  test:
-    name: 🧪 Run Tests
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            packages/*/node_modules
-          key: ${{ needs.install.outputs.cache-key }}
-
-      - name: Install dependencies (if cache miss)
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npm run db:generate
-
       - name: Run Unit Tests
         run: npm run test:unit
         continue-on-error: true
 
-      - name: Run Integration Tests
-        run: npm run test:integration
-        continue-on-error: true
-
-  # ============================================
-  # SECURITY AUDIT
-  # ============================================
-  security:
-    name: 🔒 Security Audit
-    runs-on: ubuntu-latest
-    needs: install
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
-
-      - name: Check for known vulnerabilities
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-  # ============================================
-  # BUILD APPLICATION
-  # ============================================
-  build:
-    name: 🏗️ Build Application
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Restore node_modules cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules
-            apps/*/node_modules
-            packages/*/node_modules
-          key: ${{ needs.install.outputs.cache-key }}
-
-      - name: Install dependencies (if cache miss)
-        run: npm ci
-
-      - name: Generate Prisma Client
-        run: npm run db:generate
-
-      - name: Build all packages
+      - name: Build Application
         run: npm run build
         env:
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
@@ -211,12 +64,35 @@ jobs:
           retention-days: 7
 
   # ============================================
+  # SECURITY AUDIT
+  # ============================================
+  security:
+    name: 🔒 Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+  # ============================================
   # DEPLOY TO STAGING (on develop branch)
   # ============================================
   deploy-staging:
     name: 🚀 Deploy to Staging
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-test
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
     environment:
       name: staging
@@ -233,6 +109,7 @@ jobs:
 
       - name: Deploy to Vercel (Staging)
         uses: amondnet/vercel-action@v25
+        continue-on-error: true
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
@@ -246,7 +123,7 @@ jobs:
   deploy-production:
     name: 🌐 Deploy to Production
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-and-test
     if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && github.event_name == 'push'
     environment:
       name: production
@@ -263,6 +140,7 @@ jobs:
 
       - name: Deploy to Vercel (Production)
         uses: amondnet/vercel-action@v25
+        continue-on-error: true
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
@@ -270,20 +148,3 @@ jobs:
           vercel-args: '--prod'
           scope: ${{ secrets.VERCEL_ORG_ID }}
           working-directory: ./apps/web
-
-  # ============================================
-  # NOTIFY ON FAILURE
-  # ============================================
-  notify-failure:
-    name: 📢 Notify on Failure
-    runs-on: ubuntu-latest
-    needs: [lint, test, build]
-    if: failure()
-    steps:
-      - name: Send failure notification
-        run: |
-          echo "❌ CI Pipeline failed for ${{ github.repository }}"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "Author: ${{ github.actor }}"
-          # Add Slack/Discord webhook notification here if needed

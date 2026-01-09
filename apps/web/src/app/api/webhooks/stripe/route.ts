@@ -165,7 +165,11 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
 async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
     const booking = await prisma.booking.findFirst({
-        where: { stripePaymentIntentId: paymentIntent.id }
+        where: { stripePaymentIntentId: paymentIntent.id },
+        include: {
+            user: true,
+            serviceType: true,
+        }
     });
 
     if (!booking) {
@@ -176,5 +180,56 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
     // Keep booking in DRAFT status (payment failed)
     console.log(`[Webhook] Payment failed for booking ${booking.id}`);
 
-    // TODO: Send notification to customer about failed payment
+    // Send notification to customer about failed payment
+    try {
+        await sendEmailNotification(booking.userId, {
+            to: booking.user.email,
+            subject: 'Payment Issue - Action Required | Fixelo',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #dc2626;">Payment Failed</h1>
+                    <p>Hi ${booking.user.firstName || 'there'},</p>
+                    <p>Unfortunately, we couldn't process your payment for your cleaning service booking.</p>
+                    
+                    <div style="background-color: #fef2f2; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <strong>Booking Details:</strong>
+                        <ul>
+                            <li>Service: ${booking.serviceType?.name || 'Cleaning Service'}</li>
+                            <li>Date: ${new Date(booking.scheduledDate).toLocaleDateString()}</li>
+                            <li>Amount: $${booking.totalPrice.toFixed(2)}</li>
+                        </ul>
+                    </div>
+                    
+                    <p><strong>What to do next:</strong></p>
+                    <ol>
+                        <li>Check that your card has sufficient funds</li>
+                        <li>Verify your card details are correct</li>
+                        <li>Try a different payment method</li>
+                    </ol>
+                    
+                    <p style="text-align: center; margin: 30px 0;">
+                        <a href="${process.env.NEXT_PUBLIC_APP_URL}/book/review" 
+                           style="background-color: #2563eb; color: white; padding: 12px 24px; 
+                                  text-decoration: none; border-radius: 8px; font-weight: bold;">
+                            Retry Payment
+                        </a>
+                    </p>
+                    
+                    <p style="color: #666; font-size: 14px;">
+                        If you continue to experience issues, please contact us at support@fixelo.app
+                    </p>
+                    
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+                    <p style="color: #999; font-size: 12px;">
+                        © ${new Date().getFullYear()} Fixelo. All rights reserved.
+                    </p>
+                </div>
+            `,
+        }, { bookingId: booking.id, type: 'PAYMENT_FAILED' });
+
+        console.log(`[Webhook] Sent payment failed notification to ${booking.user.email}`);
+    } catch (err) {
+        console.error(`[Webhook] Failed to send payment failed notification:`, err);
+    }
 }
+
