@@ -1,0 +1,100 @@
+services:
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.6
+    container_name: fixelo-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.tlschallenge=true
+      - --certificatesresolvers.letsencrypt.acme.email=admin@innexar.app
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/letsencrypt:/letsencrypt
+    networks:
+      - fixelo-network
+    labels:
+      - "traefik.enable=true"
+
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: fixelo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fixelo_password}
+      POSTGRES_DB: ${POSTGRES_DB:-fixelo_dev}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - fixelo-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Application
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: fixelo-web
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL_INTERNAL=http://web:3000
+      - HOSTNAME=0.0.0.0
+      - PORT=3000
+      - SMTP_HOST=${SMTP_HOST:-my.mailbux.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-no-reply@fixelo.app}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - SMTP_FROM=${SMTP_FROM:-no-reply@fixelo.app}
+    volumes:
+      # Hot reload - montar código fonte
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/.next
+      - /app/apps/web/node_modules
+      - /app/packages/database/node_modules
+    working_dir: /app
+    command: sh -c "npm install && npm run db:generate && cd apps/web && npm run dev"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - fixelo-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.fixelo.rule=Host(`fixelo.app`)"
+      - "traefik.http.routers.fixelo.entrypoints=websecure"
+      - "traefik.http.routers.fixelo.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.fixelo.service=fixelo-service"
+      - "traefik.http.services.fixelo-service.loadbalancer.server.port=3000"
+      - "traefik.http.routers.fixelo.middlewares=fixelo-headers"
+      - "traefik.http.middlewares.fixelo-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
+
+volumes:
+  db_data:
+    driver: local
+
+networks:
+  fixelo-network:
+    driver: bridge

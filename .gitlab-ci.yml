@@ -1,0 +1,65 @@
+stages:
+  - lint
+  - test
+  - sonar
+  - build
+
+default:
+  image: node:22
+  cache:
+    key:
+      files:
+        - package-lock.json
+        - turbo.json
+    paths:
+      - node_modules/
+      - .npm/
+
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.npm"
+
+lint:
+  stage: lint
+  tags:
+    - docker
+    - linux
+  script:
+    - npm ci
+    - npm run lint
+
+test:
+  stage: test
+  tags:
+    - docker
+    - linux
+  script:
+    - npm ci
+    - npm run test
+
+build:
+  stage: build
+  tags:
+    - docker
+    - linux
+  script:
+    - npm ci
+    - npm run build
+
+sonarqube-check:
+  stage: sonar
+  image: 
+    name: sonarsource/sonar-scanner-cli:latest
+    entrypoint: [""]
+  variables:
+    SONAR_USER_HOME: "${CI_PROJECT_DIR}/.sonar"
+    GIT_DEPTH: "0"
+  cache:
+    key: "${CI_JOB_NAME}"
+    paths:
+      - .sonar/cache
+  script: 
+    - sonar-scanner -Dsonar.qualitygate.wait=true -Dsonar.host.url=$SONAR_HOST_URL -Dsonar.login=$SONAR_TOKEN
+  allow_failure: true
+  only:
+    - main
+    - master

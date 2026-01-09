@@ -1,0 +1,66 @@
+<svg width="200" height="50" viewBox="0 0 200 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(0.95); }
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0.6; transform: scale(0.85) rotate(0deg); }
+      50% { opacity: 1; transform: scale(1) rotate(10deg); }
+    }
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes glow {
+      0%, 100% { filter: drop-shadow(0 0 3px rgba(37, 99, 235, 0.4)); }
+      50% { filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.8)); }
+    }
+    .main-star { 
+      animation: pulse 2.5s ease-in-out infinite, glow 2.5s ease-in-out infinite; 
+      transform-origin: 25px 22px; 
+    }
+    .small-star { 
+      animation: sparkle 2s ease-in-out infinite 0.5s; 
+      transform-origin: 42px 14px; 
+    }
+    .text-group {
+      animation: glow 3s ease-in-out infinite;
+    }
+  </style>
+  
+  <!-- Main Sparkle Icon -->
+  <g class="main-star">
+    <path d="M25 5L28.5 18.5L42 22L28.5 25.5L25 39L21.5 25.5L8 22L21.5 18.5L25 5Z" fill="url(#paint0_linear)" stroke="white" stroke-width="1.5"/>
+  </g>
+  
+  <!-- Small Accent Star -->
+  <g class="small-star">
+    <path d="M42 5L44 12L51 14L44 16L42 23L40 16L33 14L40 12L42 5Z" fill="url(#paint1_linear)"/>
+  </g>
+  
+  <!-- Professional Typography with subtle animation -->
+  <g class="text-group">
+    <text x="60" y="33" font-family="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="700" font-size="28" fill="#1e293b" letter-spacing="-1">
+      <tspan fill="url(#text_gradient)">Fixelo</tspan>
+    </text>
+  </g>
+  
+  <!-- Shimmer Effect Overlay -->
+  <defs>
+    <linearGradient id="paint0_linear" x1="25" y1="5" x2="25" y2="39" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2563EB"/>
+      <stop offset="0.5" stop-color="#3B82F6"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="paint1_linear" x1="42" y1="5" x2="42" y2="23" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10B981"/>
+      <stop offset="1" stop-color="#34D399"/>
+    </linearGradient>
+    <linearGradient id="text_gradient" x1="60" y1="10" x2="140" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1e293b"/>
+      <stop offset="0.5" stop-color="#334155"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+</svg>

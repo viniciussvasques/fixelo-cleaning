@@ -1,0 +1,713 @@
+// Fixelo Platform — Complete Database Schema
+// File: packages/database/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  CUSTOMER
+  CLEANER
+  ADMIN
+}
+
+enum BookingStatus {
+  DRAFT           // Created but not paid
+  PENDING         // Paid, awaiting cleaner assignment
+  ASSIGNED        // Cleaner assigned, awaiting acceptance
+  ACCEPTED        // Cleaner accepted
+  IN_PROGRESS     // Cleaner started job
+  COMPLETED       // Job completed
+  CANCELLED       // Cancelled by customer/admin
+  REFUNDED        // Payment refunded
+  DISPUTED        // Customer disputed
+  RESOLVED        // Dispute resolved
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+enum CleanerStatus {
+  PENDING_APPROVAL  // Onboarding not complete
+  ACTIVE            // Available for jobs
+  BUSY              // Currently on a job
+  UNAVAILABLE       // Temporarily unavailable
+  SUSPENDED         // Admin suspended
+  DEACTIVATED       // Self-deactivated
+}
+
+enum AssignmentStatus {
+  PENDING      // Waiting for cleaner acceptance
+  ACCEPTED     // Cleaner accepted
+  REJECTED     // Cleaner rejected
+  EXPIRED      // 15-min timeout
+  CANCELLED    // Booking cancelled
+}
+
+enum NotificationType {
+  SMS
+  EMAIL
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  DELIVERED
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  phone         String?   @unique
+  passwordHash  String
+  firstName     String
+  lastName      String
+  role          UserRole  @default(CUSTOMER)
+  emailVerified DateTime?
+  phoneVerified DateTime?
+  stripeCustomerId String?  @unique
+  
+  // Password Reset
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+  
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  
+  // Referral System
+  referralCode  String?   @unique // Code to share (e.g. JOHN123)
+  credits       Float     @default(0) // $ Wallet balance
+  
+  // Push Notifications
+  pushSubscription Json?   // Web Push subscription object
+  pushEnabled      Boolean @default(false)
+  
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  cleanerProfile CleanerProfile?
+  bookings       Booking[]
+  reviews        Review[]
+  addresses      Address[]
+  notifications  Notification[]
+
+  // Referral Relations
+  referralsSent      Referral[] @relation("Referrer")
+  referralReceived   Referral?  @relation("Referred")
+  sentMessages       Message[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+}
+
+// ============================================
+// CLEANER
+// ============================================
+
+model CleanerProfile {
+  id                    String         @id @default(uuid())
+  userId                String         @unique
+  user                  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  status                CleanerStatus  @default(PENDING_APPROVAL)
+  rating                Float          @default(0) // 0-5
+  totalRatings          Int            @default(0)
+  jobsCompleted         Int            @default(0)
+  jobsCancelled         Int            @default(0)
+  cancellationsLast30   Int            @default(0)
+  
+  // Provider Metrics (Uber-style)
+  totalJobsOffered    Int @default(0)
+  totalJobsAccepted   Int @default(0)
+  totalJobsCompleted  Int @default(0)
+  totalLateArrivals   Int @default(0)
+  
+  acceptanceRate      Float @default(0) // 0-1
+  completionRate      Float @default(0) // 0-1
+  punctualityRate     Float @default(0) // 0-1
+  qualityScore        Float @default(0) // Composite score
+  
+  // Onboarding & Verification
+  stripeAccountId       String?        @unique
+  businessType          String?        // 'INDIVIDUAL' | 'COMPANY'
+  ein                   String?        // Encrypted ideally, or last 4
+  ssnLast4              String?
+  
+  yearsOfExperience     Int            @default(0)
+  hasInsurance          Boolean        @default(false)
+  websiteUrl            String?
+  instagramHandle       String?
+  linkedinProfile       String?
+  facebookProfileUrl    String?
+  
+  bio                   String?        @db.Text
+  
+  // Verification Docs
+  idDocumentUrl         String?
+  photoIdType           String?        // 'DRIVERS_LICENSE', 'PASSPORT', 'STATE_ID'
+  selfieVerificationUrl String?
+  selfieVerified        Boolean        @default(false)
+  insuranceDocUrl       String?
+  backgroundCheckStatus String?        // 'pending', 'approved', 'rejected'
+  backgroundCheckId     String?
+  
+  verificationStatus    String         @default("PENDING") // PENDING, DOCUMENTS_NEEDED, UNDER_REVIEW, BACKGROUND_CHECK, APPROVED, REJECTED
+  onboardingCompleted   Boolean        @default(false)
+  onboardingStep        Int            @default(1)         // Track current step (1-5)
+  
+  // Verification Timeline
+  submittedAt           DateTime?
+  reviewedAt            DateTime?
+  reviewedBy            String?        // Admin userId
+  rejectionReason       String?
+  
+  // Location
+  latitude              Float?
+  longitude             Float?
+  serviceRadius         Int            @default(25) // km
+  
+  // Preferences
+  acceptsStandard       Boolean        @default(true)
+  acceptsDeep           Boolean        @default(true)
+  acceptsAirbnb         Boolean        @default(true)
+  
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  // Relations
+  availability          CleanerAvailability[]
+  assignments           CleanerAssignment[]
+  payments              Payment[]
+  reviews               Review[]
+  payouts               Payout[]
+  references            CleanerReference[]
+
+  @@index([status])
+  @@index([latitude, longitude])
+  @@index([verificationStatus])
+}
+
+// Professional References for Cleaner Verification
+model CleanerReference {
+  id              String         @id @default(uuid())
+  cleanerId       String
+  cleaner         CleanerProfile @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  name            String
+  phone           String
+  email           String?
+  relationship    String         // "Former Client", "Employer", "Colleague"
+  
+  // Admin Contact Tracking
+  contacted       Boolean        @default(false)
+  contactedAt     DateTime?
+  contactedBy     String?        // Admin userId
+  verified        Boolean        @default(false)
+  notes           String?        @db.Text
+  
+  createdAt       DateTime       @default(now())
+  
+  @@index([cleanerId])
+}
+
+model CleanerAvailability {
+  id        String      @id @default(uuid())
+  cleanerId String
+  cleaner   CleanerProfile @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  dayOfWeek DayOfWeek
+  startTime String      // '09:00' (24h format)
+  endTime   String      // '17:00'
+  isActive  Boolean     @default(true)
+  
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([cleanerId, dayOfWeek, startTime])
+  @@index([cleanerId, isActive])
+}
+
+// ============================================
+// SERVICE TYPES & ADD-ONS
+// ============================================
+
+model ServiceType {
+  id          String    @id @default(uuid())
+  name        String    @unique // 'Standard Cleaning', 'Deep Cleaning', 'Airbnb Cleaning'
+  slug        String    @unique // 'standard', 'deep', 'airbnb'
+  description String?
+  
+  // Pricing base (can be overridden by region)
+  basePrice   Float     // USD
+  
+  // Inclusions (JSON)
+  inclusions  Json      // ['Dusting', 'Vacuum', 'Mopping', ...]
+  exclusions  Json?     // ['Inside oven', 'Inside fridge', ...]
+  
+  // Time estimation
+  baseTime    Int       // minutes (base time)
+  timePerBed  Int       // additional minutes per bedroom
+  timePerBath Int       // additional minutes per bathroom
+
+  // Pricing Multipliers
+  pricePerBed Float     @default(20.00)
+  pricePerBath Float    @default(25.00)
+  pricePerPet Float     @default(15.00)
+  
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  bookings    Booking[]
+
+  @@index([slug])
+}
+
+model AddOn {
+  id          String    @id @default(uuid())
+  name        String    @unique // 'Inside Oven', 'Inside Fridge'
+  slug        String    @unique // 'inside-oven'
+  description String?
+  price       Float     // Additional USD
+  timeAdded   Int       // Additional minutes
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  bookingAddOns BookingAddOn[]
+
+  @@index([isActive])
+}
+
+// ============================================
+// BOOKING
+// ============================================
+
+model Booking {
+  id                     String        @id @default(uuid())
+  userId                 String
+  user                   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  serviceTypeId          String
+  serviceType            ServiceType   @relation(fields: [serviceTypeId], references: [id])
+  
+  status                 BookingStatus @default(DRAFT)
+  
+  // Scheduling
+  scheduledDate          DateTime
+  timeWindow             String        // '09:00-12:00'
+  estimatedDuration      Int           // minutes
+  
+  // Home details
+  bedrooms               Int
+  bathrooms              Int
+  squareFootage          Int?
+  hasPets                Boolean       @default(false)
+  specialInstructions    String?       @db.Text
+  
+  // Address (can be from saved addresses or one-time)
+  addressId              String?
+  address                Address?      @relation(fields: [addressId], references: [id])
+  addressSnapshot        Json          // Store address even if Address deleted
+  
+  // Pricing
+  basePrice              Float
+  addOnsTotal            Float         @default(0)
+  subtotal               Float
+  stripeFee              Float         // Calculated
+  platformReserve        Float         // Insurance/reserve
+  totalPrice             Float
+  
+  // Payment
+  stripePaymentIntentId  String?       @unique
+  
+  // Cancellation
+  cancelledAt            DateTime?
+  cancelledBy            String?       // userId
+  cancellationReason     String?
+  
+
+  // Financial & Payouts
+  payoutId               String?
+  payout                 Payout?       @relation(fields: [payoutId], references: [id])
+  payoutStatus           String        @default("PENDING") // PENDING, PAID, HOLD
+  payoutEligibleAt       DateTime?
+  disputeStatus          String?       // OPEN, RESOLVED_CLEANER, RESOLVED_CUSTOMER
+
+  // Messages
+  messages               Message[]
+
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+  // Relations
+  addOns                 BookingAddOn[]
+  assignments            CleanerAssignment[]
+  payment                Payment?
+  review                 Review?
+
+  @@index([userId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([serviceTypeId])
+}
+
+model BookingAddOn {
+  id        String   @id @default(uuid())
+  bookingId String
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  addOnId   String
+  addOn     AddOn    @relation(fields: [addOnId], references: [id])
+  
+  price     Float    // Snapshot of price at time of booking
+  quantity  Int      @default(1)
+  
+  createdAt DateTime @default(now())
+
+  @@unique([bookingId, addOnId])
+  @@index([bookingId])
+}
+
+// ============================================
+// CLEANER ASSIGNMENT
+// ============================================
+
+model CleanerAssignment {
+  id        String           @id @default(uuid())
+  bookingId String
+  booking   Booking          @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  cleanerId String
+  cleaner   CleanerProfile   @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  status    AssignmentStatus @default(PENDING)
+  
+  // Score used for assignment (for analytics)
+  matchScore Float?
+  
+  // Acceptance window
+  expiresAt  DateTime         // 15 minutes from creation
+  acceptedAt DateTime?
+  rejectedAt DateTime?
+  
+  // Job execution
+  startedAt  DateTime?
+  completedAt DateTime?
+  
+  // Distance (for analytics)
+  distanceKm Float?
+  
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@index([bookingId])
+  @@index([cleanerId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ============================================
+// PAYMENT
+// ============================================
+
+model Payment {
+  id                    String        @id @default(uuid())
+  bookingId             String        @unique
+  booking               Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  // Customer payment
+  amount                Float
+  stripeFee             Float
+  platformReserve       Float
+  netAmount             Float         // After fees
+  
+  stripePaymentIntentId String?       @unique
+  stripeChargeId        String?       @unique
+  status                PaymentStatus @default(PENDING)
+  
+  paidAt                DateTime?
+  
+  // Cleaner payout
+  cleanerId             String?
+  cleaner               CleanerProfile? @relation(fields: [cleanerId], references: [id])
+  
+  cleanerAmount         Float?        // 70% of net
+  platformAmount        Float?        // 30% of net
+  
+  stripeTransferId      String?       @unique
+  paidOutAt             DateTime?
+  
+  // Refund
+  refundedAmount        Float?
+  refundedAt            DateTime?
+  stripeRefundId        String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([bookingId])
+  @@index([cleanerId])
+  @@index([status])
+}
+
+// ============================================
+// REVIEWS
+// ============================================
+
+model Review {
+  id        String   @id @default(uuid())
+  bookingId String   @unique
+  booking   Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  userId    String   // Customer who wrote review
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  cleanerId String   // Cleaner being reviewed
+  cleaner   CleanerProfile @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  rating    Int      // 1-5
+  comment   String?  @db.Text
+  
+  // Optional detailed ratings
+  qualityRating      Int?  // 1-5
+  punctualityRating  Int?  // 1-5
+  friendlinessRating Int?  // 1-5
+  
+  isPublic  Boolean  @default(false) // For future use
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cleanerId])
+  @@index([rating])
+}
+
+// ============================================
+// ADDRESSES
+// ============================================
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  label     String?  // 'Home', 'Office', etc.
+  
+  street    String
+  unit      String?
+  city      String
+  state     String   // 2-letter code
+  zipCode   String
+  country   String   @default("US")
+  
+  // Geocoding
+  latitude  Float?
+  longitude Float?
+  
+  // Access instructions
+  accessInstructions String? @db.Text // 'Leave key with doorman'
+  
+  isDefault Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  bookings  Booking[]
+
+  @@index([userId])
+  @@index([latitude, longitude])
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+model Notification {
+  id        String             @id @default(uuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type      NotificationType
+  status    NotificationStatus @default(PENDING)
+  
+  // Content
+  subject   String?
+  body      String             @db.Text
+  
+  // Delivery
+  sentAt    DateTime?
+  deliveredAt DateTime?
+  failedAt  DateTime?
+  errorMessage String?
+  
+  // External IDs
+  twilioSid String?            @unique
+  sendgridId String?           @unique
+  
+  // Metadata
+  metadata  Json?              // Booking ID, etc.
+  
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  // Null if system action
+  action    String   // 'booking.created', 'cleaner.suspended'
+  entity    String   // 'Booking', 'User'
+  entityId  String   // ID of affected entity
+  
+  changes   Json?    // { before: {...}, after: {...} }
+  metadata  Json?    // Additional context
+  ipAddress String?
+  userAgent String?
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+// ============================================
+// SYSTEM CONFIG (for admin)
+// ============================================
+
+model SystemConfig {
+  id        String   @id @default(uuid())
+  key       String   @unique // 'stripe_fees_percentage', 'platform_commission'
+  value     String   // JSON-stringified value
+  
+  description String?
+  
+  updatedBy String?  // Admin userId
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  @@index([key])
+}
+
+// ============================================
+// FINANCIAL & SETTINGS
+// ============================================
+
+model FinancialSettings {
+  id                    String   @id @default(uuid())
+  
+  // Fees
+  platformFeePercent    Float    @default(0.15)
+  stripeFeePercent      Float    @default(0.029)
+  stripeFeeFixed        Float    @default(0.30)
+  insuranceFeePercent   Float    @default(0.02)
+  
+  // Payouts
+  autoPayoutEnabled     Boolean  @default(true)
+  payoutSchedule        String   @default("WEEKLY")
+  payoutDay             String   @default("FRIDAY")
+  minPayoutAmount       Float    @default(50)
+  holdDaysAfterService  Int      @default(2)
+  requireCustomerReview Boolean  @default(true)
+  
+  updatedAt             DateTime @updatedAt
+}
+
+model Payout {
+  id                String         @id @default(uuid())
+  cleanerId         String
+  cleaner           CleanerProfile @relation(fields: [cleanerId], references: [id])
+  
+  amount            Float
+  currency          String   @default("usd")
+  status            String   // PENDING, PAID, FAILED
+  
+  periodStart       DateTime
+  periodEnd         DateTime
+  
+  bookings          Booking[]
+  
+  stripePayoutId    String?
+  paidAt            DateTime?
+  failureReason     String?
+  
+  createdAt         DateTime @default(now())
+  
+  @@index([cleanerId])
+}
+
+model Referral {
+  id                String   @id @default(uuid())
+  referrerId        String
+  referrer          User     @relation("Referrer", fields: [referrerId], references: [id])
+  referredId        String   @unique
+  referred          User     @relation("Referred", fields: [referredId], references: [id])
+  
+  status            String   // PENDING, QUALIFIED, PAID
+  bonusAmount       Float    @default(20)
+  paidAt            DateTime?
+  
+  createdAt         DateTime @default(now())
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  bookingId  String
+  booking    Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  senderId   String
+  sender     User     @relation(fields: [senderId], references: [id])
+  
+  content    String   @db.Text
+  read       Boolean  @default(false)
+  
+  createdAt  DateTime @default(now())
+  
+  @@index([bookingId])
+  @@index([senderId])
+}

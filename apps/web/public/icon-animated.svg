@@ -1,0 +1,57 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.92); opacity: 0.9; }
+    }
+    @keyframes sparkle {
+      0%, 100% { opacity: 0.5; transform: scale(0.75) rotate(-5deg); }
+      50% { opacity: 1; transform: scale(1) rotate(10deg); }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2px); }
+    }
+    @keyframes glow {
+      0%, 100% { filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.3)); }
+      50% { filter: drop-shadow(0 4px 12px rgba(37, 99, 235, 0.6)); }
+    }
+    .icon-group { animation: float 3s ease-in-out infinite, glow 2s ease-in-out infinite; }
+    .main-star { animation: pulse 2s ease-in-out infinite; transform-origin: 24px 24px; }
+    .star-1 { animation: sparkle 1.8s ease-in-out infinite 0.2s; transform-origin: 38px 12px; }
+    .star-2 { animation: sparkle 2.2s ease-in-out infinite 0.6s; transform-origin: 10px 36px; }
+  </style>
+  
+  <g class="icon-group">
+    <!-- Main Sparkle Star -->
+    <g class="main-star">
+      <path d="M24 4L28.5 18L42 24L28.5 30L24 44L19.5 30L6 24L19.5 18L24 4Z" fill="url(#main_gradient)" stroke="white" stroke-width="2"/>
+    </g>
+    
+    <!-- Top Right Accent Star -->
+    <g class="star-1">
+      <path d="M38 6L39.5 11L44 12.5L39.5 14L38 19L36.5 14L32 12.5L36.5 11L38 6Z" fill="url(#accent1_gradient)"/>
+    </g>
+    
+    <!-- Bottom Left Accent Star -->
+    <g class="star-2">
+      <path d="M10 32L11 35.5L14.5 36.5L11 37.5L10 41L9 37.5L5.5 36.5L9 35.5L10 32Z" fill="url(#accent2_gradient)"/>
+    </g>
+  </g>
+  
+  <defs>
+    <linearGradient id="main_gradient" x1="24" y1="4" x2="24" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B82F6"/>
+      <stop offset="0.5" stop-color="#2563EB"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="accent1_gradient" x1="38" y1="6" x2="38" y2="19" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34D399"/>
+      <stop offset="1" stop-color="#10B981"/>
+    </linearGradient>
+    <linearGradient id="accent2_gradient" x1="10" y1="32" x2="10" y2="41" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#60a5fa"/>
+      <stop offset="1" stop-color="#93c5fd"/>
+    </linearGradient>
+  </defs>
+</svg>

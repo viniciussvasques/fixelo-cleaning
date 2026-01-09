@@ -1,0 +1,25 @@
+FROM node:22-alpine
+
+# Instalar dependências do sistema
+RUN apk add --no-cache libc6-compat openssl
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+COPY turbo.json ./
+
+# Copiar package.json dos workspaces
+COPY apps/web/package*.json ./apps/web/
+COPY packages/*/package*.json ./packages/*/
+
+# Instalar dependências (será sobrescrito pelo volume, mas necessário para build)
+RUN npm install
+
+# Expor porta
+EXPOSE 3000
+
+# Comando padrão (será sobrescrito pelo docker-compose)
+CMD ["npm", "run", "dev"]
+

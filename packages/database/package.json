@@ -1,0 +1,26 @@
+{
+    "name": "@fixelo/database",
+    "version": "1.0.0",
+    "private": true,
+    "main": "./src/client.ts",
+    "types": "./src/client.ts",
+    "scripts": {
+        "db:generate": "prisma generate",
+        "db:migrate": "prisma migrate dev",
+        "db:studio": "prisma studio",
+        "db:seed": "tsx prisma/seed.ts"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
+    },
+    "devDependencies": {
+        "@types/bcryptjs": "^2.4.6",
+        "bcryptjs": "^3.0.3",
+        "tsx": "^4.7.0",
+        "typescript": "^5.3.3"
+    },
+    "dependencies": {
+        "@prisma/client": "^5.22.0",
+        "prisma": "^5.22.0"
+    }
+}
