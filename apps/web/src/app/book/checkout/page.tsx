@@ -107,16 +107,16 @@ export default function CheckoutPage() {
             if (foundService) setService(foundService);
             if (addOnsData.addOns) setAvailableAddOns(addOnsData.addOns);
 
-            // 2. Calculate price for display
+            // 2. Calculate price for display using service pricing
             let price = foundService?.basePrice || 0;
-            if (homeDetails) {
-                if (homeDetails.bedrooms > 1) price += (homeDetails.bedrooms - 1) * 20;
-                if (homeDetails.bathrooms > 1) price += (homeDetails.bathrooms - 1) * 25;
-                if (homeDetails.hasPets) price += 15;
+            if (homeDetails && foundService) {
+                if (homeDetails.bedrooms > 1) price += (homeDetails.bedrooms - 1) * (foundService.pricePerBed || 0);
+                if (homeDetails.bathrooms > 1) price += (homeDetails.bathrooms - 1) * (foundService.pricePerBath || 0);
+                if (homeDetails.hasPets) price += (foundService.pricePerPet || 0);
             }
 
             const addOnsPrice = addOns.reduce((total, addOnId) => {
-                const ad = addOnsData.addOns?.find((a: AddOn) => a.id === addOnId);
+                const ad = addOnsData.addOns?.find((a: AddOn) => a.id === addOnId || a.slug === addOnId);
                 return total + (ad ? ad.price : 0);
             }, 0);
 
