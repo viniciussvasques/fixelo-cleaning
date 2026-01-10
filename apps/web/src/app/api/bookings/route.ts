@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
 
@@ -86,6 +86,7 @@ export async function POST(req: Request) {
         const totalPrice = price;
 
         // 2. Create PaymentIntent
+        const stripe = await getStripeClient();
         const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(totalPrice * 100), // cents
             currency: 'usd',
