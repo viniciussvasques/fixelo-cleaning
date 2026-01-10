@@ -36,7 +36,7 @@ async function getEmailConfig(): Promise<EmailConfig> {
     const configs = await prisma.systemConfig.findMany({
       where: {
         key: {
-          in: ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_from']
+          in: ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_password', 'email_from']
         }
       },
       select: { key: true, value: true }
@@ -50,7 +50,7 @@ async function getEmailConfig(): Promise<EmailConfig> {
       port: parseInt(configMap.get('smtp_port') || process.env.SMTP_PORT || '587'),
       user: configMap.get('smtp_user') || process.env.SMTP_USER || 'no-reply@fixelo.app',
       password: configMap.get('smtp_password') || process.env.SMTP_PASSWORD || '',
-      from: configMap.get('smtp_from') || process.env.SMTP_FROM || 'no-reply@fixelo.app',
+      from: configMap.get('email_from') || process.env.SMTP_FROM || 'no-reply@fixelo.app',
     };
 
     cachedEmailConfig = config;
