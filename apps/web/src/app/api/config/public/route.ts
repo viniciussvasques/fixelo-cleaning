@@ -10,10 +10,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 
-// Cache configuration - DISABLED for debugging
+// Cache configuration - 1 minute TTL for responsiveness
 let configCache: Record<string, string> | null = null;
 let cacheTimestamp = 0;
-const CACHE_TTL = 0; // DISABLED - was 5 * 60 * 1000
+const CACHE_TTL = 60 * 1000; // 1 minute for quick updates after admin changes
 
 const PUBLIC_CONFIG_KEYS = [
     'stripe_publishable_key',

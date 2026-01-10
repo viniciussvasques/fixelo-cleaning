@@ -5,12 +5,8 @@
  * Uses Stripe Connect with destination charges.
  */
 
-import Stripe from 'stripe';
 import { prisma } from '@fixelo/database';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2023-10-16',
-});
+import { getStripeClient } from './stripe';
 
 interface TransferResult {
     success: boolean;
@@ -66,7 +62,8 @@ export async function createTransferToCleaner(
         const cleanerPayout = Math.round((totalAmount - platformFee) * 100); // In cents
 
         // Create transfer
-        const transfer = await stripe.transfers.create({
+        const stripeClient = await getStripeClient();
+        const transfer = await stripeClient.transfers.create({
             amount: cleanerPayout,
             currency: 'usd',
             destination: cleaner.stripeAccountId,

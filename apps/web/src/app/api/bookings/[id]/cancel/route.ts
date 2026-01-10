@@ -4,11 +4,7 @@ import { prisma, BookingStatus } from '@fixelo/database';
 import { z } from 'zod';
 import { sendEmailNotification } from '@/lib/email';
 import { sendSMSNotification } from '@/lib/sms';
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2023-10-16',
-});
+import { getStripeClient } from '@/lib/stripe';
 
 const cancelSchema = z.object({
     reason: z.string().min(10, 'Please provide a reason (minimum 10 characters)'),
@@ -138,7 +134,8 @@ export async function POST(
         if (booking.payment?.stripePaymentIntentId && booking.payment.status === 'SUCCEEDED') {
             try {
                 // Create refund via Stripe
-                const refund = await stripe.refunds.create({
+                const stripeClient = await getStripeClient();
+                const refund = await stripeClient.refunds.create({
                     payment_intent: booking.payment.stripePaymentIntentId,
                     reason: 'requested_by_customer',
                 });

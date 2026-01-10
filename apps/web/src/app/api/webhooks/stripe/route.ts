@@ -4,8 +4,10 @@ import Stripe from 'stripe';
 import { findMatches } from '@/lib/matching';
 import { sendEmailNotification } from '@/lib/email';
 import { bookingConfirmationEmail, newJobOfferEmail, cleanerAssignedEmail } from '@/lib/email-templates';
+import { getStripeClient } from '@/lib/stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Stripe instance for webhook verification (must be sync, uses env var)
+const stripeForWebhook = new Stripe(process.env.STRIPE_SECRET_KEY || '');
 
 // Webhook secret from Stripe Dashboard
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
@@ -21,7 +23,7 @@ export async function POST(req: NextRequest) {
     let event: Stripe.Event;
 
     try {
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+        event = stripeForWebhook.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
         console.error('Webhook signature verification failed:', err);
         return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });

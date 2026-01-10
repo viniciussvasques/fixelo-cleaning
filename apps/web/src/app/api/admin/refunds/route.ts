@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { auth } from '@/lib/auth';
-import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { getStripeClient } from '@/lib/stripe';
 
 export async function POST(req: Request) {
     try {
@@ -41,7 +39,8 @@ export async function POST(req: Request) {
         }
 
         // Process refund via Stripe
-        const refund = await stripe.refunds.create({
+        const stripeClient = await getStripeClient();
+        const refund = await stripeClient.refunds.create({
             payment_intent: payment.stripePaymentIntentId,
             amount: Math.round(amount * 100), // Convert to cents
             reason: 'requested_by_customer',
