@@ -6,10 +6,8 @@ import { useBookingStore } from '@/store/booking';
 import { formatCurrency } from '@/lib/utils';
 import { ServiceType, AddOn } from '@prisma/client';
 import { format } from 'date-fns';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { StripeProvider } from '@/components/providers/StripeProvider';
 
 function CheckoutForm({ amount }: { amount: number }) {
     const stripe = useStripe();
@@ -174,11 +172,6 @@ export default function CheckoutPage() {
         },
     };
 
-    const options = {
-        clientSecret,
-        appearance,
-    };
-
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             {/* Header */}
@@ -194,9 +187,9 @@ export default function CheckoutPage() {
                         <h2 className="text-xl font-bold text-gray-900 mb-6">Payment Details</h2>
 
                         {clientSecret && (
-                            <Elements options={options} stripe={stripePromise}>
+                            <StripeProvider clientSecret={clientSecret} options={{ appearance }}>
                                 <CheckoutForm amount={calculatedPrice} />
-                            </Elements>
+                            </StripeProvider>
                         )}
                     </div>
 
