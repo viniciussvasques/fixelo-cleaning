@@ -5,6 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock, MapPin, Mail, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import ReviewForm from '@/components/booking/ReviewForm';
+import BookingDetailsClient from '@/components/dashboard/BookingDetailsClient';
 import { formatCurrency, formatDate, BOOKING_STATUS } from '@/lib/constants';
 
 interface Props {
@@ -243,27 +244,8 @@ export default async function BookingDetailsPage({ params }: Props) {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="card p-6">
-            <h3 className="font-semibold mb-3">Actions</h3>
-            <div className="space-y-2">
-              <button
-                className="w-full btn btn-outline text-sm"
-                disabled={booking.status === 'COMPLETED' || booking.status === 'CANCELLED'}
-              >
-                Reschedule
-              </button>
-              <button
-                className="w-full btn btn-outline text-error border-error hover:bg-error hover:text-error-foreground text-sm"
-                disabled={booking.status === 'COMPLETED' || booking.status === 'CANCELLED'}
-              >
-                Cancel Booking
-              </button>
-              <Link href="/help" className="w-full btn btn-ghost text-sm">
-                Get Help
-              </Link>
-            </div>
-          </div>
+          {/* Actions - usando componente client para funcionalidade */}
+          <BookingDetailsClient bookingId={booking.id} status={booking.status} />
         </div>
       </div>
     </div>

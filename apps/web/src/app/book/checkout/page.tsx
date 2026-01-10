@@ -109,8 +109,7 @@ export default function CheckoutPage() {
             if (foundService) setService(foundService);
             if (addOnsData.addOns) setAvailableAddOns(addOnsData.addOns);
 
-            // 2. Calculate price
-            // 2. Calculate price
+            // 2. Calculate price for display
             let price = foundService?.basePrice || 0;
             if (homeDetails) {
                 if (homeDetails.bedrooms > 1) price += (homeDetails.bedrooms - 1) * 20;
@@ -126,25 +125,29 @@ export default function CheckoutPage() {
             const totalPrice = price + addOnsPrice;
             setCalculatedPrice(totalPrice);
 
-            // 3. Create Payment Intent
-            const paymentResponse = await fetch('/api/create-payment-intent', {
+            // 3. Create Booking (which also creates PaymentIntent)
+            // This is the correct API that creates the booking record with stripePaymentIntentId
+            const bookingResponse = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    amount: totalPrice,
                     serviceId,
                     homeDetails,
-                    schedule: { // Normalize to what CREATE API expects
+                    schedule: {
                         date: selectedDate,
                         timeSlot: selectedTimeSlot
                     },
                     address,
-                    specialInstructions,
                     addOns,
                 }),
             });
 
-            const { clientSecret: secret } = await paymentResponse.json();
+            if (!bookingResponse.ok) {
+                const errorData = await bookingResponse.json();
+                throw new Error(errorData.error || 'Failed to create booking');
+            }
+
+            const { clientSecret: secret } = await bookingResponse.json();
             setClientSecret(secret);
             setIsLoading(false);
         } catch (error) {

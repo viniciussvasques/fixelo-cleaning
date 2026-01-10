@@ -98,31 +98,41 @@ export async function POST(req: Request) {
             },
         });
 
-        // 3. Create Booking Record (Pending Payment)
-        // We need to create/find Address record first if we want to link it properly, 
-        // or just store snapshot. Schema says addressSnapshot is Json, addressId is optional.
+        // 3. Create or find Address and link to booking
+        const addressRecord = await prisma.address.create({
+            data: {
+                userId,
+                street: address.street,
+                unit: address.unit || null,
+                city: address.city,
+                state: address.state,
+                zipCode: address.zipCode,
+                isDefault: false,
+            }
+        });
 
+        // 4. Create Booking Record (Pending Payment)
         const booking = await prisma.booking.create({
             data: {
                 userId,
                 serviceTypeId: serviceId,
-                status: 'DRAFT', // or PENDING
+                status: 'DRAFT', // Will be updated to PENDING by webhook after payment
                 scheduledDate: new Date(schedule.date),
                 timeWindow: schedule.timeSlot,
-                estimatedDuration: service.baseTime, // Simplify for now
+                estimatedDuration: service.baseTime,
                 bedrooms: homeDetails.bedrooms,
                 bathrooms: homeDetails.bathrooms,
                 squareFootage: homeDetails.squareFootage,
                 hasPets: homeDetails.hasPets,
-                addressSnapshot: address, // Prisma Json type
+                addressId: addressRecord.id, // Link to Address record
+                addressSnapshot: address, // Also keep snapshot for historical purposes
                 basePrice: service.basePrice,
                 addOnsTotal: addOnsTotal,
                 subtotal: totalPrice,
-                stripeFee: 0, // calc later or ignore for MVP
+                stripeFee: 0,
                 platformReserve: 0,
                 totalPrice: totalPrice,
                 stripePaymentIntentId: paymentIntent.id,
-                // Add relations for addons using the found DB records (which have the correct UUIDs)
                 addOns: {
                     create: dbAddOns.map((addon) => ({
                         addOnId: addon.id,

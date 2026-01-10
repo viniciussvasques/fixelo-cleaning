@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,8 +25,11 @@ type SignupFormData = z.infer<typeof signupSchema>;
 
 export default function SignUpPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    const callbackUrl = searchParams.get('callbackUrl') || '';
 
     const {
         register,
@@ -66,11 +69,15 @@ export default function SignUpPage() {
                 throw new Error(result.error || 'Signup failed');
             }
 
-            // Redirect based on role
+            // Redirect based on role and callbackUrl
             if (data.role === 'CLEANER') {
-                router.push('/auth/signin?message=Account created! Please sign in to complete your professional profile.');
+                // For cleaners, redirect to signin with callbackUrl to onboarding
+                const onboardingCallback = callbackUrl || '/cleaner/onboarding';
+                router.push(`/auth/signin?message=Account created! Please sign in to complete your professional profile.&callbackUrl=${encodeURIComponent(onboardingCallback)}`);
             } else {
-                router.push('/auth/signin?message=Account created successfully. Please sign in.');
+                // For customers, use the callbackUrl if provided
+                const customerCallback = callbackUrl ? `&callbackUrl=${encodeURIComponent(callbackUrl)}` : '';
+                router.push(`/auth/signin?message=Account created successfully. Please sign in.${customerCallback}`);
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
@@ -109,8 +116,8 @@ export default function SignUpPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <label
                                 className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedRole === 'CUSTOMER'
-                                        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                    ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+                                    : 'border-gray-200 hover:border-gray-300'
                                     }`}
                             >
                                 <input
@@ -129,8 +136,8 @@ export default function SignUpPage() {
 
                             <label
                                 className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedRole === 'CLEANER'
-                                        ? 'border-green-600 bg-green-50 ring-2 ring-green-200'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                    ? 'border-green-600 bg-green-50 ring-2 ring-green-200'
+                                    : 'border-gray-200 hover:border-gray-300'
                                     }`}
                             >
                                 <input
@@ -255,8 +262,8 @@ export default function SignUpPage() {
                             type="submit"
                             disabled={isLoading}
                             className={`group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${selectedRole === 'CLEANER'
-                                    ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-                                    : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+                                ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
+                                : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
                                 } focus:outline-none focus:ring-2 focus:ring-offset-2`}
                         >
                             {isLoading

@@ -37,7 +37,7 @@ export default function HomePage() {
             <div className="flex items-center gap-3 sm:gap-4">
               <Link
                 href="/auth/signin"
-                className="hidden sm:inline-flex text-slate-600 hover:text-blue-600 font-medium transition-colors text-sm sm:text-base"
+                className="text-slate-600 hover:text-blue-600 font-medium transition-colors text-sm sm:text-base"
               >
                 Sign In
               </Link>
@@ -128,42 +128,35 @@ export default function HomePage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-            {[
-              {
-                step: '01',
-                title: 'Choose Your Service',
-                description: 'Select from Standard, Deep, or Airbnb Turnover cleaning based on your needs.',
-                icon: Sparkles,
-                color: 'blue',
-              },
-              {
-                step: '02',
-                title: 'Pick Date & Time',
-                description: 'Choose a convenient slot that fits your schedule. We\'re flexible!',
-                icon: Calendar,
-                color: 'indigo',
-              },
-              {
-                step: '03',
-                title: 'Relax & Enjoy',
-                description: 'Our vetted professional arrives and transforms your space.',
-                icon: CheckCircle,
-                color: 'emerald',
-              },
-            ].map((item, index) => (
-              <div
-                key={index}
-                className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-scale-in"
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <div className={`w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-${item.color}-500 to-${item.color}-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-${item.color}-500/30`}>
-                  <item.icon className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
-                </div>
-                <div className="text-xs sm:text-sm font-bold text-blue-600 mb-2">{item.step}</div>
-                <h3 className="text-xl sm:text-2xl font-bold mb-3">{item.title}</h3>
-                <p className="text-slate-600 leading-relaxed">{item.description}</p>
+            {/* Step 1 */}
+            <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-scale-in">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/30">
+                <Sparkles className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
               </div>
-            ))}
+              <div className="text-xs sm:text-sm font-bold text-blue-600 mb-2">01</div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3">Choose Your Service</h3>
+              <p className="text-slate-600 leading-relaxed">Select from Standard, Deep, or Airbnb Turnover cleaning based on your needs.</p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-scale-in" style={{ animationDelay: '0.1s' }}>
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-indigo-500/30">
+                <Calendar className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div className="text-xs sm:text-sm font-bold text-blue-600 mb-2">02</div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3">Pick Date & Time</h3>
+              <p className="text-slate-600 leading-relaxed">Choose a convenient slot that fits your schedule. We're flexible!</p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 animate-scale-in" style={{ animationDelay: '0.2s' }}>
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center mb-4 sm:mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-emerald-500/30">
+                <CheckCircle className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
+              </div>
+              <div className="text-xs sm:text-sm font-bold text-blue-600 mb-2">03</div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-3">Relax & Enjoy</h3>
+              <p className="text-slate-600 leading-relaxed">Our vetted professional arrives and transforms your space.</p>
+            </div>
           </div>
         </div>
       </section>

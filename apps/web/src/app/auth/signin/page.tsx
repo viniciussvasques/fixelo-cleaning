@@ -74,7 +74,7 @@ function SignInPageContent() {
                     </h2>
                     <p className="mt-2 text-center text-sm text-gray-600">
                         Don't have an account?{' '}
-                        <a href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
+                        <a href={`/auth/signup${callbackUrl !== '/' ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ''}`} className="font-medium text-blue-600 hover:text-blue-500">
                             Create one now
                         </a>
                     </p>
