@@ -1,19 +1,109 @@
 /**
- * Twilio SMS Integration
+ * Twilio SMS Service with Dynamic Configuration
  * 
- * Send SMS notifications via Twilio.
- * Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER in .env
+ * Loads Twilio configuration from database at runtime.
+ * Falls back to environment variables if database is unavailable.
  */
 
 import twilio from 'twilio';
 import { prisma } from '@fixelo/database';
 
-// Initialize Twilio client
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+// Cache for Twilio config
+interface TwilioConfig {
+    accountSid: string;
+    authToken: string;
+    phoneNumber: string;
+}
 
-const client = accountSid && authToken ? twilio(accountSid, authToken) : null;
+let cachedTwilioConfig: TwilioConfig | null = null;
+let twilioConfigCacheTimestamp = 0;
+const TWILIO_CONFIG_CACHE_TTL = 30 * 1000; // 30 seconds
+
+// Cache for Twilio client
+let cachedTwilioClient: twilio.Twilio | null = null;
+let cachedClientConfig: string | null = null;
+
+/**
+ * Gets Twilio configuration from database or env fallback
+ */
+async function getTwilioConfig(): Promise<TwilioConfig> {
+    const now = Date.now();
+
+    // Return cached config if still valid
+    if (cachedTwilioConfig && (now - twilioConfigCacheTimestamp) < TWILIO_CONFIG_CACHE_TTL) {
+        return cachedTwilioConfig;
+    }
+
+    try {
+        const configs = await prisma.systemConfig.findMany({
+            where: {
+                key: {
+                    in: ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number']
+                }
+            },
+            select: { key: true, value: true }
+        });
+
+        const configMap = new Map(configs.map(c => [c.key, c.value]));
+
+        // Build config from database or fallback to env
+        const config: TwilioConfig = {
+            accountSid: configMap.get('twilio_account_sid') || process.env.TWILIO_ACCOUNT_SID || '',
+            authToken: configMap.get('twilio_auth_token') || process.env.TWILIO_AUTH_TOKEN || '',
+            phoneNumber: configMap.get('twilio_phone_number') || process.env.TWILIO_PHONE_NUMBER || '',
+        };
+
+        cachedTwilioConfig = config;
+        twilioConfigCacheTimestamp = now;
+        return config;
+    } catch (error) {
+        console.error('[SMS] Error fetching Twilio config from DB:', error);
+
+        // Fallback to environment variables
+        const config: TwilioConfig = {
+            accountSid: process.env.TWILIO_ACCOUNT_SID || '',
+            authToken: process.env.TWILIO_AUTH_TOKEN || '',
+            phoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
+        };
+
+        cachedTwilioConfig = config;
+        twilioConfigCacheTimestamp = now;
+        return config;
+    }
+}
+
+/**
+ * Gets or creates a Twilio client with current config
+ */
+async function getTwilioClient(): Promise<twilio.Twilio | null> {
+    const config = await getTwilioConfig();
+
+    if (!config.accountSid || !config.authToken) {
+        return null;
+    }
+
+    const configKey = `${config.accountSid}:${config.authToken}`;
+
+    // Return cached client if config hasn't changed
+    if (cachedTwilioClient && cachedClientConfig === configKey) {
+        return cachedTwilioClient;
+    }
+
+    // Create new client
+    cachedTwilioClient = twilio(config.accountSid, config.authToken);
+    cachedClientConfig = configKey;
+    return cachedTwilioClient;
+}
+
+/**
+ * Clears the cached Twilio config (call after updating in admin panel)
+ */
+export function clearTwilioConfigCache(): void {
+    cachedTwilioConfig = null;
+    twilioConfigCacheTimestamp = 0;
+    cachedTwilioClient = null;
+    cachedClientConfig = null;
+}
 
 interface SendSMSResult {
     success: boolean;
@@ -25,7 +115,10 @@ interface SendSMSResult {
  * Send SMS message
  */
 export async function sendSMS(to: string, body: string): Promise<SendSMSResult> {
-    if (!client || !fromNumber) {
+    const config = await getTwilioConfig();
+    const client = await getTwilioClient();
+
+    if (!client || !config.phoneNumber) {
         console.warn('[SMS] Twilio not configured, skipping SMS');
         return { success: false, error: 'Twilio not configured' };
     }
@@ -39,7 +132,7 @@ export async function sendSMS(to: string, body: string): Promise<SendSMSResult> 
     try {
         const message = await client.messages.create({
             body,
-            from: fromNumber,
+            from: config.phoneNumber,
             to: normalizedPhone,
         });
 
@@ -58,7 +151,6 @@ export async function sendSMS(to: string, body: string): Promise<SendSMSResult> 
  * Normalize phone number to E.164 format
  */
 function normalizePhoneNumber(phone: string): string | null {
-    // Remove all non-digit characters
     const digits = phone.replace(/\D/g, '');
 
     // US numbers
