@@ -79,6 +79,32 @@ export async function getStripeClient(): Promise<Stripe> {
 }
 
 /**
+ * Gets the Stripe webhook secret from database or env fallback
+ */
+export async function getStripeWebhookSecret(): Promise<string> {
+    try {
+        const config = await prisma.systemConfig.findUnique({
+            where: { key: 'stripe_webhook_secret' },
+            select: { value: true },
+        });
+
+        if (config?.value) {
+            return config.value;
+        }
+    } catch (error) {
+        console.error('[Stripe] Error fetching webhook secret from DB:', error);
+    }
+
+    // Fallback to environment variable
+    const envSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (envSecret) {
+        return envSecret;
+    }
+
+    throw new Error('STRIPE_WEBHOOK_SECRET not configured in database or environment');
+}
+
+/**
  * Clears the cached key (call after updating keys in admin panel)
  */
 export function clearStripeCache(): void {
