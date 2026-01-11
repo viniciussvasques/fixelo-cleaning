@@ -169,7 +169,7 @@ export default function ReviewPage() {
                                 <div className="border-t border-gray-100 pt-4">
                                     <div className="flex justify-between items-center mb-2">
                                         <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Add-ons</h3>
-                                        <Link href="/book/addons" className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
+                                        <Link href="/book/details" className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
                                             <Pencil className="w-3 h-3" /> Edit
                                         </Link>
                                     </div>

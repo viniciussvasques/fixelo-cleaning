@@ -7,8 +7,7 @@ const BOOKING_STEPS = [
     { id: 3, name: 'Schedule', path: '/book/schedule' },
     { id: 4, name: 'Account', path: '/book/auth' },
     { id: 5, name: 'Address', path: '/book/address' },
-    { id: 6, name: 'Add-ons', path: '/book/addons' },
-    { id: 7, name: 'Review', path: '/book/review' },
+    { id: 6, name: 'Review', path: '/book/review' },
 ];
 
 interface BookingProgressProps {

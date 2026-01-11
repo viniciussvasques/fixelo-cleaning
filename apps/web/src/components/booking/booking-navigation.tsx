@@ -68,8 +68,7 @@ export const BOOKING_NAV_MAP = {
     '/book/details': { back: '/book', next: '/book/schedule' },
     '/book/schedule': { back: '/book/details', next: '/book/auth' },
     '/book/auth': { back: '/book/schedule', next: '/book/address' },
-    '/book/address': { back: '/book/auth', next: '/book/addons' },
-    '/book/addons': { back: '/book/address', next: '/book/review' },
-    '/book/review': { back: '/book/addons', next: '/book/checkout' },
+    '/book/address': { back: '/book/auth', next: '/book/review' },
+    '/book/review': { back: '/book/address', next: '/book/checkout' },
     '/book/checkout': { back: '/book/review', next: null },
 };

@@ -13,10 +13,9 @@ const PATH_TO_STEP: Record<string, number> = {
     '/book/schedule': 3,
     '/book/auth': 4,
     '/book/address': 5,
-    '/book/addons': 6,
-    '/book/review': 7,
-    '/book/checkout': 7,
-    '/book/success': 8,
+    '/book/review': 6,
+    '/book/checkout': 6,
+    '/book/success': 7,
 };
 
 export default function BookLayout({
