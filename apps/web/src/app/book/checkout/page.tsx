@@ -8,6 +8,7 @@ import { ServiceType, AddOn } from '@prisma/client';
 import { format } from 'date-fns';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { StripeProvider } from '@/components/providers/StripeProvider';
+import { Loader2 } from 'lucide-react';
 
 function CheckoutForm({ amount }: { amount: number }) {
     const stripe = useStripe();
@@ -15,6 +16,7 @@ function CheckoutForm({ amount }: { amount: number }) {
     const _router = useRouter();
     const { reset: _reset } = useBookingStore();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isElementReady, setIsElementReady] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -38,27 +40,62 @@ function CheckoutForm({ amount }: { amount: number }) {
         }
     };
 
+    const handlePaymentElementReady = () => {
+        setIsElementReady(true);
+        setErrorMessage(null);
+    };
+
+    const handlePaymentElementLoadError = (event: { elementType: string; error: { message?: string } }) => {
+        console.error('[PaymentElement] Load error:', event.error);
+        setErrorMessage(event.error.message || 'Failed to load payment form. Please refresh and try again.');
+        setIsElementReady(true); // Stop loading spinner
+    };
+
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
-            <PaymentElement />
+            {/* Loading state for PaymentElement */}
+            {!isElementReady && !errorMessage && (
+                <div className="flex items-center justify-center p-8 border border-gray-200 rounded-lg bg-gray-50">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                    <span className="text-gray-600">Loading payment form...</span>
+                </div>
+            )}
+
+            <div className={!isElementReady && !errorMessage ? 'hidden' : ''}>
+                <PaymentElement
+                    onReady={handlePaymentElementReady}
+                    onLoadError={handlePaymentElementLoadError}
+                />
+            </div>
 
             {errorMessage && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                    {errorMessage}
+                    <p className="font-medium">Payment Error</p>
+                    <p className="text-sm mt-1">{errorMessage}</p>
                 </div>
             )}
 
             <button
                 type="submit"
-                disabled={!stripe || isProcessing}
-                className="w-full py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!stripe || isProcessing || !isElementReady || !!errorMessage}
+                className="w-full py-3 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-                {isProcessing ? 'Processing...' : `Pay ${formatCurrency(amount)}`}
+                {isProcessing ? (
+                    <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Processing...
+                    </>
+                ) : (
+                    `🔒 Pay ${formatCurrency(amount)}`
+                )}
             </button>
 
-            <div className="text-center text-xs text-gray-500">
-                <p>🔒 Secure payment processing by Stripe</p>
-                <p className="mt-1">By clicking Pay, you agree to our Terms of Service.</p>
+            <div className="text-center text-xs text-gray-500 space-y-1">
+                <p>Your payment is secured with 256-bit SSL encryption by Stripe</p>
+                <p className="flex items-center justify-center gap-1">
+                    <span>🔒</span> Secure payment processing by Stripe
+                </p>
+                <p>By clicking Pay, you agree to our Terms of Service and Cancellation Policy.</p>
             </div>
         </form>
     );

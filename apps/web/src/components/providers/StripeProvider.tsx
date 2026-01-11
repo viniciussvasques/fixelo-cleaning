@@ -71,6 +71,7 @@ export function StripeProvider({ children, clientSecret, options }: StripeProvid
 
     // Error state
     if (error || !config?.stripePublishableKey) {
+        console.error('[StripeProvider] Config error:', { error, hasKey: !!config?.stripePublishableKey });
         return (
             <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-center">
                 <p className="text-destructive">
@@ -90,7 +91,7 @@ export function StripeProvider({ children, clientSecret, options }: StripeProvid
         );
     }
 
-    // If clientSecret is required but not provided, show error
+    // If clientSecret is required but not provided or invalid, show error
     if (!clientSecret) {
         return (
             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-center">
@@ -101,29 +102,45 @@ export function StripeProvider({ children, clientSecret, options }: StripeProvid
         );
     }
 
-    const elementsOptions = {
-        clientSecret,
-        appearance: {
-            theme: 'stripe' as const,
-            variables: {
-                colorPrimary: '#2563eb',
-                colorBackground: '#ffffff',
-                colorText: '#1f2937',
-                colorDanger: '#dc2626',
-                fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-                borderRadius: '8px',
+    // Validate clientSecret format (should start with pi_ or seti_)
+    const isValidClientSecret = clientSecret.startsWith('pi_') || clientSecret.startsWith('seti_');
+    if (!isValidClientSecret) {
+        console.error('[StripeProvider] Invalid clientSecret format:', clientSecret.substring(0, 10));
+        return (
+            <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-center">
+                <p className="text-destructive">
+                    Invalid payment session. Please try again.
+                </p>
+            </div>
+        );
+    }
+
+    // Merge default appearance with provided options
+    const defaultAppearance = {
+        theme: 'stripe' as const,
+        variables: {
+            colorPrimary: '#2563eb',
+            colorBackground: '#ffffff',
+            colorText: '#1f2937',
+            colorDanger: '#dc2626',
+            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+            borderRadius: '8px',
+        },
+        rules: {
+            '.Input': {
+                border: '1px solid #e5e7eb',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
             },
-            rules: {
-                '.Input': {
-                    border: '1px solid #e5e7eb',
-                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
-                },
-                '.Input:focus': {
-                    border: '1px solid #2563eb',
-                    boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
-                },
+            '.Input:focus': {
+                border: '1px solid #2563eb',
+                boxShadow: '0 0 0 3px rgba(37, 99, 235, 0.1)',
             },
         },
+    };
+
+    const elementsOptions = {
+        clientSecret,
+        appearance: options?.appearance || defaultAppearance,
     };
 
     return (
