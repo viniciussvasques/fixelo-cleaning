@@ -40,6 +40,15 @@ export async function POST(req: Request) {
         });
 
         if (existingBooking) {
+            // If booking exists but is still DRAFT, update to PENDING (payment was confirmed)
+            if (existingBooking.status === 'DRAFT') {
+                const updatedBooking = await prisma.booking.update({
+                    where: { id: existingBooking.id },
+                    data: { status: 'PENDING' }
+                });
+                console.log(`[Booking Create] Updated existing booking ${existingBooking.id} from DRAFT to PENDING`);
+                return NextResponse.json({ booking: updatedBooking, message: 'Booking status updated to PENDING' });
+            }
             return NextResponse.json({ booking: existingBooking, message: 'Booking already exists' });
         }
 
