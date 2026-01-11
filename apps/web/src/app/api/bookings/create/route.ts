@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { auth } from '@/lib/auth';
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 import { findMatches } from '@/lib/matching';
 import { sendEmailNotification } from '@/lib/email';
 
@@ -28,6 +28,7 @@ export async function POST(req: Request) {
         // Extract payment intent ID from client_secret (format: pi_xxxxx_secret_yyyy)
         const paymentIntentIdExtracted = paymentIntentId.split('_secret_')[0];
 
+        const stripe = await getStripeClient();
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentIdExtracted);
 
         if (paymentIntent.status !== 'succeeded') {
