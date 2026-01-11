@@ -61,18 +61,23 @@ function BookDetailsPageContent() {
     const calculatePrice = React.useCallback(() => {
         if (!service) return;
 
-        let price = service.basePrice;
+        // Use centralized price calculator for consistency
+        let price = service.basePrice || 0;
 
-        const pricePerBed = (service as any).pricePerBed ?? 20;
-        const pricePerBath = (service as any).pricePerBath ?? 25;
-        const pricePerPet = (service as any).pricePerPet ?? 15;
+        // Extra room charges
+        if (bedrooms > 1) {
+            price += (bedrooms - 1) * ((service as any).pricePerBed || 0);
+        }
+        if (bathrooms > 1) {
+            price += (bathrooms - 1) * ((service as any).pricePerBath || 0);
+        }
+        if (hasPets) {
+            price += ((service as any).pricePerPet || 0);
+        }
 
-        if (bedrooms > 1) price += (bedrooms - 1) * pricePerBed;
-        if (bathrooms > 1) price += (bathrooms - 1) * pricePerBath;
-        if (hasPets) price += pricePerPet;
-
+        // Add-ons - search by ID or slug for consistency
         addOns.forEach(addOnId => {
-            const addOn = availableAddOns.find(a => a.id === addOnId);
+            const addOn = availableAddOns.find(a => a.id === addOnId || a.slug === addOnId);
             if (addOn) {
                 price += addOn.price;
             }
@@ -80,11 +85,12 @@ function BookDetailsPageContent() {
 
         setCalculatedPrice(price);
 
+        // Time calculation
         const baseTime = 120;
         let time = baseTime + (bedrooms - 1) * service.timePerBed + (bathrooms - 1) * service.timePerBath;
 
         addOns.forEach(addOnId => {
-            const addOn = availableAddOns.find(a => a.id === addOnId);
+            const addOn = availableAddOns.find(a => a.id === addOnId || a.slug === addOnId);
             if (addOn) {
                 time += addOn.timeAdded;
             }

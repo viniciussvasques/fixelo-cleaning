@@ -54,17 +54,17 @@ export async function POST(req: Request) {
             return new NextResponse("Service not found", { status: 400 });
         }
 
-        let price = service.basePrice;
+        let price = service.basePrice || 0;
 
-        // Use DB-configured pricing multipliers from ServiceType
+        // Use DB-configured pricing multipliers from ServiceType (with fallback to 0)
         if (homeDetails.bedrooms > 1) {
-            price += (homeDetails.bedrooms - 1) * service.pricePerBed;
+            price += (homeDetails.bedrooms - 1) * (service.pricePerBed || 0);
         }
         if (homeDetails.bathrooms > 1) {
-            price += (homeDetails.bathrooms - 1) * service.pricePerBath;
+            price += (homeDetails.bathrooms - 1) * (service.pricePerBath || 0);
         }
         if (homeDetails.hasPets) {
-            price += service.pricePerPet;
+            price += (service.pricePerPet || 0);
         }
 
         // Add-ons
