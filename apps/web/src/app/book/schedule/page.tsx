@@ -50,10 +50,11 @@ export default function SchedulePage() {
         const fetchAddOnsAndCalculate = async () => {
             if (!service || !homeDetails) return;
 
+            // Use service pricing instead of hardcoded values
             let p = service.basePrice;
-            if (homeDetails.bedrooms > 1) p += (homeDetails.bedrooms - 1) * 20;
-            if (homeDetails.bathrooms > 1) p += (homeDetails.bathrooms - 1) * 25;
-            if (homeDetails.hasPets) p += 15;
+            if (homeDetails.bedrooms > 1) p += (homeDetails.bedrooms - 1) * (service.pricePerBed || 0);
+            if (homeDetails.bathrooms > 1) p += (homeDetails.bathrooms - 1) * (service.pricePerBath || 0);
+            if (homeDetails.hasPets) p += (service.pricePerPet || 0);
 
             // Fetch add-ons dynamically
             try {
@@ -62,7 +63,10 @@ export default function SchedulePage() {
                     const res = await fetch('/api/add-ons');
                     const data = await res.json();
                     addOnsState.forEach((addOnId: string) => {
-                        const addOn = data.addOns?.find((a: { id: string; price: number }) => a.id === addOnId);
+                        // Search by id or slug
+                        const addOn = data.addOns?.find((a: { id: string; slug: string; price: number }) =>
+                            a.id === addOnId || a.slug === addOnId
+                        );
                         if (addOn) p += addOn.price;
                     });
                 }

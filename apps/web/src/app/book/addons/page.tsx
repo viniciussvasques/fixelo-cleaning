@@ -62,16 +62,17 @@ export default function AddOnsPage() {
     const calculatePrice = () => {
         if (!service || !homeDetails) return;
 
+        // Use service pricing instead of hardcoded values
         let price = service.basePrice;
 
         if (homeDetails.bedrooms > 1) {
-            price += (homeDetails.bedrooms - 1) * 20;
+            price += (homeDetails.bedrooms - 1) * ((service as any).pricePerBed || 0);
         }
         if (homeDetails.bathrooms > 1) {
-            price += (homeDetails.bathrooms - 1) * 25;
+            price += (homeDetails.bathrooms - 1) * ((service as any).pricePerBath || 0);
         }
         if (homeDetails.hasPets) {
-            price += 15;
+            price += ((service as any).pricePerPet || 0);
         }
 
         // Add selected add-ons price

@@ -342,19 +342,19 @@ function BookDetailsPageContent() {
                                 {bedrooms > 1 && (
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600">Extra Bedrooms ({bedrooms - 1})</span>
-                                        <span className="font-medium">{formatCurrency((bedrooms - 1) * 20)}</span>
+                                        <span className="font-medium">{formatCurrency((bedrooms - 1) * ((service as any).pricePerBed || 0))}</span>
                                     </div>
                                 )}
                                 {bathrooms > 1 && (
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600">Extra Bathrooms ({bathrooms - 1})</span>
-                                        <span className="font-medium">{formatCurrency((bathrooms - 1) * 25)}</span>
+                                        <span className="font-medium">{formatCurrency((bathrooms - 1) * ((service as any).pricePerBath || 0))}</span>
                                     </div>
                                 )}
                                 {hasPets && (
                                     <div className="flex justify-between items-center text-sm">
                                         <span className="text-gray-600">Pet Fee</span>
-                                        <span className="font-medium">{formatCurrency(15)}</span>
+                                        <span className="font-medium">{formatCurrency((service as any).pricePerPet || 0)}</span>
                                     </div>
                                 )}
                                 {availableAddOns.filter(a => addOns.includes(a.id)).map((addOn) => (
