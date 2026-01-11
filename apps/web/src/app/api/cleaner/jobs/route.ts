@@ -1,16 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { AssignmentStatus } from '@prisma/client';
-
-// Mock session/auth for MVP
-// In real app: const session = await auth(); userId = session.user.id;
-const MOCK_USER_ID = "cleaner-user-id";
+import { auth } from '@/lib/auth';
 
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const status = searchParams.get('status');
-        const userId = searchParams.get('userId') || MOCK_USER_ID; // Allow passing userId for testing
+
+        // Get authenticated user
+        const session = await auth();
+        if (!session?.user?.id) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const userId = session.user.id;
 
         // Find cleaner profile
         const cleaner = await prisma.cleanerProfile.findUnique({

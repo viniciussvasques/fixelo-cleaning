@@ -11,32 +11,60 @@ import { ChatInterface } from "@/components/chat/chat-interface";
 
 export default async function JobDetailsPage({ params }: { params: { id: string } }) {
     const session = await auth();
-    const bookingId = params.id;
+    if (!session?.user?.id) return null;
 
-    const booking = await prisma.booking.findUnique({
-        where: { id: bookingId },
+    const id = params.id;
+
+    // Try to find by assignmentId first (from jobs list links)
+    // Then fallback to bookingId (for direct links)
+    let booking;
+    let myAssignment;
+
+    const assignment = await prisma.cleanerAssignment.findUnique({
+        where: { id },
         include: {
-            serviceType: true,
-            address: true,
-            assignments: {
-                where: {
-                    // If I am assigned to this job
-                    cleaner: { userId: session?.user?.id }
+            booking: {
+                include: {
+                    serviceType: true,
+                    address: true
                 }
             }
         }
     });
 
+    if (assignment) {
+        // Found by assignment ID
+        booking = assignment.booking;
+        myAssignment = assignment;
+    } else {
+        // Fallback: search by booking ID
+        booking = await prisma.booking.findUnique({
+            where: { id },
+            include: {
+                serviceType: true,
+                address: true,
+                assignments: {
+                    where: {
+                        cleaner: { userId: session.user.id }
+                    }
+                }
+            }
+        });
+
+        if (booking) {
+            myAssignment = booking.assignments?.[0];
+        }
+    }
+
     if (!booking) notFound();
 
     // Determine view mode
-    const myAssignment = booking.assignments[0];
     const isMyJob = !!myAssignment;
     const isAvailable = booking.status === BookingStatus.PENDING;
 
-    // Actions
-    const acceptAction = acceptJob.bind(null, booking.id);
-    const completeAction = completeJob.bind(null, booking.id);
+    // Actions - use assignment ID if available, otherwise booking ID
+    const acceptAction = acceptJob.bind(null, myAssignment?.id || booking.id);
+    const completeAction = completeJob.bind(null, myAssignment?.id || booking.id);
 
     return (
         <div className="space-y-6 max-w-3xl mx-auto">

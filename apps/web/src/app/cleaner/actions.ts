@@ -7,7 +7,7 @@ import { UserRole, BookingStatus, AssignmentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-export async function acceptJob(bookingId: string) {
+export async function acceptJob(id: string) {
     const session = await auth();
     if (!session?.user?.id || session.user.role !== UserRole.CLEANER) {
         throw new Error("Unauthorized");
@@ -19,10 +19,59 @@ export async function acceptJob(bookingId: string) {
 
     if (!cleaner) throw new Error("Cleaner profile not found");
 
+    // Try to find assignment first (new flow), then booking (legacy)
+    const existingAssignment = await prisma.cleanerAssignment.findUnique({
+        where: { id },
+        include: { booking: true }
+    });
+
+    let bookingId: string;
+    let assignmentId: string | undefined;
+
+    if (existingAssignment) {
+        // New flow: id is assignment.id
+        bookingId = existingAssignment.bookingId;
+        assignmentId = existingAssignment.id;
+    } else {
+        // Legacy flow: id is booking.id
+        bookingId = id;
+    }
+
     // Transaction to ensure atomicity
     await prisma.$transaction(async (tx) => {
-        // 2. Atomic Update: Set Booking to ACCEPTED only if it is currently PENDING
-        // This prevents race conditions where two cleaners accept simultaneously
+        if (existingAssignment) {
+            // Update existing assignment to ACCEPTED
+            await tx.cleanerAssignment.update({
+                where: { id: assignmentId },
+                data: {
+                    status: AssignmentStatus.ACCEPTED,
+                    acceptedAt: new Date()
+                }
+            });
+
+            // Cancel other pending assignments for this booking
+            await tx.cleanerAssignment.updateMany({
+                where: {
+                    bookingId,
+                    id: { not: assignmentId },
+                    status: AssignmentStatus.PENDING
+                },
+                data: { status: AssignmentStatus.CANCELLED }
+            });
+        } else {
+            // Legacy: Create new assignment
+            await tx.cleanerAssignment.create({
+                data: {
+                    bookingId,
+                    cleanerId: cleaner.id,
+                    status: AssignmentStatus.ACCEPTED,
+                    acceptedAt: new Date(),
+                    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24h
+                }
+            });
+        }
+
+        // Update Booking status
         const updateResult = await tx.booking.updateMany({
             where: {
                 id: bookingId,
@@ -35,29 +84,19 @@ export async function acceptJob(bookingId: string) {
             throw new Error("Job is no longer available (already accepted)");
         }
 
-        // 3. Create Assignment (Safe to do now)
-        await tx.cleanerAssignment.create({
-            data: {
-                bookingId: bookingId,
-                cleanerId: cleaner.id,
-                status: AssignmentStatus.ACCEPTED,
-                expiresAt: new Date(Date.now() + 15 * 60 * 1000)
-            }
-        });
-
-        // 4. Update Cleaner Metrics (Accepted Count)
+        // Update Cleaner Metrics
         await tx.cleanerProfile.update({
             where: { id: cleaner.id },
             data: { totalJobsAccepted: { increment: 1 } }
         });
     });
 
-    // Recalculate Rates (outside tx to avoid lock contention if complex)
+    // Recalculate Rates
     await updateCleanerMetrics(cleaner.id);
 
     revalidatePath("/cleaner/jobs");
     revalidatePath("/cleaner/dashboard");
-    redirect(`/cleaner/jobs/${bookingId}`); // Redirect to details
+    redirect(`/cleaner/jobs/${assignmentId || bookingId}`);
 }
 
 export async function completeJob(bookingId: string) {

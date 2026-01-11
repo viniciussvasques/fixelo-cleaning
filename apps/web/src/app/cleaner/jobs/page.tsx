@@ -17,19 +17,26 @@ export default async function JobsPage() {
 
     if (!cleaner) return null;
 
-    // 1. Available Jobs (Paid bookings, Pending Assignment, within radius)
-    // Normally strictly geo-filtered, simplifying for MVP to 'all assigned or pending' logic
-    // For MVP: Show bookings with status PENDING (Paid, no cleaner yet)
-    const availableJobs = await prisma.booking.findMany({
+    // 1. Available Jobs - Pending assignments FOR THIS CLEANER (created by matching algorithm)
+    // The matching algorithm creates CleanerAssignment records based on proximity, rating, etc.
+    const pendingAssignments = await prisma.cleanerAssignment.findMany({
         where: {
-            status: BookingStatus.PENDING,
-            // In real world, filter by geo distance < cleaner.serviceRadius
+            cleanerId: cleaner.id,
+            status: AssignmentStatus.PENDING,
+            expiresAt: { gte: new Date() }, // Not expired
+            booking: {
+                status: BookingStatus.PENDING // Booking still waiting for cleaner
+            }
         },
         include: {
-            serviceType: true,
-            address: true
+            booking: {
+                include: {
+                    serviceType: true,
+                    address: true
+                }
+            }
         },
-        orderBy: { scheduledDate: 'asc' },
+        orderBy: { booking: { scheduledDate: 'asc' } },
         take: 10
     });
 
@@ -61,35 +68,35 @@ export default async function JobsPage() {
             <section>
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
-                        New Opportunities <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">{availableJobs.length}</span>
+                        New Opportunities <span className="bg-red-100 text-red-600 text-xs px-2 py-0.5 rounded-full">{pendingAssignments.length}</span>
                     </h2>
                 </div>
 
-                {availableJobs.length === 0 ? (
+                {pendingAssignments.length === 0 ? (
                     <Card className="p-6 text-center text-gray-500 bg-gray-50 border-dashed">
                         <p>No new jobs available in your area right now.</p>
                     </Card>
                 ) : (
                     <div className="grid md:grid-cols-2 gap-4">
-                        {availableJobs.map(job => (
-                            <Card key={job.id} className="p-4 border-l-4 border-l-green-500">
+                        {pendingAssignments.map(assignment => (
+                            <Card key={assignment.id} className="p-4 border-l-4 border-l-green-500">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>
-                                        <h3 className="font-bold">{job.serviceType.name}</h3>
+                                        <h3 className="font-bold">{assignment.booking.serviceType.name}</h3>
                                         <p className="text-sm text-gray-500">
-                                            {job.scheduledDate.toLocaleDateString()} • {job.timeWindow}
+                                            {assignment.booking.scheduledDate.toLocaleDateString()} • {assignment.booking.timeWindow}
                                         </p>
                                     </div>
                                     <div className="font-bold text-green-600">
-                                        {formatCurrency(job.totalPrice * 0.70)} {/* Est. 70% payout */}
+                                        {formatCurrency(assignment.booking.totalPrice * 0.70)} {/* Est. 70% payout */}
                                     </div>
                                 </div>
                                 <div className="flex items-center text-sm text-gray-600 mb-4">
                                     <MapPin className="w-4 h-4 mr-1" />
-                                    {job.address?.city || "Unknown Location"}
+                                    {assignment.booking.address?.city || "Unknown Location"}
                                 </div>
                                 <Button className="w-full" asChild>
-                                    <Link href={`/cleaner/jobs/${job.id}`}>View Details & Accept</Link>
+                                    <Link href={`/cleaner/jobs/${assignment.id}`}>View Details & Accept</Link>
                                 </Button>
                             </Card>
                         ))}
