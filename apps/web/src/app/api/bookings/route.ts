@@ -72,11 +72,13 @@ export async function POST(req: Request) {
         let dbAddOns: { id: string; price: number }[] = [];
 
         if (addOns && addOns.length > 0) {
-            // Frontend sends slugs (e.g., 'inside-oven'), so we check 'slug' or 'id'
-            // Ideally we standardise, but let's check slug first as that matches the hardcoded frontend values
+            // Frontend may send IDs (UUIDs) or slugs - search by both
             dbAddOns = await prisma.addOn.findMany({
                 where: {
-                    slug: { in: addOns }
+                    OR: [
+                        { id: { in: addOns } },
+                        { slug: { in: addOns } }
+                    ]
                 }
             });
             addOnsTotal = dbAddOns.reduce((acc, curr) => acc + curr.price, 0);
