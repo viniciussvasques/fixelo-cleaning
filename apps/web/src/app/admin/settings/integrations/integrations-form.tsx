@@ -19,10 +19,15 @@ import {
     Save,
     Loader2,
     Eye,
-    EyeOff
+    EyeOff,
+    Zap,
+    AlertCircle
 } from "lucide-react";
 import { saveAllIntegrationConfigs } from './actions';
 import { toast } from 'sonner';
+
+type TestStatus = 'idle' | 'testing' | 'success' | 'error';
+type TestResult = { status: TestStatus; message?: string; details?: Record<string, unknown> };
 
 type ConfigState = Record<string, { maskedValue: string; isSet: boolean }>;
 
@@ -90,8 +95,68 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
     const [isPending, startTransition] = useTransition();
     const [values, setValues] = useState<Record<string, string>>({});
 
+    // Test states
+    const [stripeTest, setStripeTest] = useState<TestResult>({ status: 'idle' });
+    const [twilioTest, setTwilioTest] = useState<TestResult>({ status: 'idle' });
+    const [emailTest, setEmailTest] = useState<TestResult>({ status: 'idle' });
+
     const handleChange = (key: string, value: string) => {
         setValues(prev => ({ ...prev, [key]: value }));
+    };
+
+    // Test handlers
+    const testStripe = async () => {
+        setStripeTest({ status: 'testing' });
+        try {
+            const res = await fetch('/api/admin/test/stripe', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                setStripeTest({ status: 'success', message: data.message, details: data.details });
+                toast.success('Stripe connection successful!');
+            } else {
+                setStripeTest({ status: 'error', message: data.message });
+                toast.error('Stripe test failed: ' + data.message);
+            }
+        } catch (error) {
+            setStripeTest({ status: 'error', message: String(error) });
+            toast.error('Failed to test Stripe');
+        }
+    };
+
+    const testTwilio = async () => {
+        setTwilioTest({ status: 'testing' });
+        try {
+            const res = await fetch('/api/admin/test/twilio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+            const data = await res.json();
+            if (data.success) {
+                setTwilioTest({ status: 'success', message: data.message, details: data.details });
+                toast.success('Twilio connection successful!');
+            } else {
+                setTwilioTest({ status: 'error', message: data.message });
+                toast.error('Twilio test failed: ' + data.message);
+            }
+        } catch (error) {
+            setTwilioTest({ status: 'error', message: String(error) });
+            toast.error('Failed to test Twilio');
+        }
+    };
+
+    const testEmail = async () => {
+        setEmailTest({ status: 'testing' });
+        try {
+            const res = await fetch('/api/admin/test/email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+            const data = await res.json();
+            if (data.success) {
+                setEmailTest({ status: 'success', message: data.message, details: data.details });
+                toast.success('Email test sent!');
+            } else {
+                setEmailTest({ status: 'error', message: data.message });
+                toast.error('Email test failed: ' + data.message);
+            }
+        } catch (error) {
+            setEmailTest({ status: 'error', message: String(error) });
+            toast.error('Failed to test Email');
+        }
     };
 
     const handleSave = () => {
@@ -255,6 +320,35 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
                         isSet={getConfig('stripe_webhook_secret').isSet}
                         onChange={handleChange}
                     />
+
+                    {/* Test Connection Button */}
+                    <div className="pt-4 border-t mt-4">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={testStripe}
+                                disabled={stripeTest.status === 'testing' || !stripeConfigured}
+                            >
+                                {stripeTest.status === 'testing' ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Zap className="w-4 h-4 mr-2" />
+                                )}
+                                Test Connection
+                            </Button>
+                            {stripeTest.status === 'success' && (
+                                <span className="text-green-600 flex items-center gap-1 text-sm">
+                                    <CheckCircle className="w-4 h-4" /> {stripeTest.message}
+                                </span>
+                            )}
+                            {stripeTest.status === 'error' && (
+                                <span className="text-red-600 flex items-center gap-1 text-sm">
+                                    <AlertCircle className="w-4 h-4" /> {stripeTest.message}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -312,6 +406,35 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
                         onChange={handleChange}
                         type="text"
                     />
+
+                    {/* Test Connection Button */}
+                    <div className="pt-4 border-t mt-4">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={testTwilio}
+                                disabled={twilioTest.status === 'testing' || !twilioConfigured}
+                            >
+                                {twilioTest.status === 'testing' ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Zap className="w-4 h-4 mr-2" />
+                                )}
+                                Test Connection
+                            </Button>
+                            {twilioTest.status === 'success' && (
+                                <span className="text-green-600 flex items-center gap-1 text-sm">
+                                    <CheckCircle className="w-4 h-4" /> {twilioTest.message}
+                                </span>
+                            )}
+                            {twilioTest.status === 'error' && (
+                                <span className="text-red-600 flex items-center gap-1 text-sm">
+                                    <AlertCircle className="w-4 h-4" /> {twilioTest.message}
+                                </span>
+                            )}
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
@@ -425,6 +548,35 @@ export function IntegrationsForm({ initialConfigs }: { initialConfigs: ConfigSta
                             isSet={getConfig('resend_api_key').isSet}
                             onChange={handleChange}
                         />
+                    </div>
+
+                    {/* Test Connection Button */}
+                    <div className="pt-4 border-t mt-4">
+                        <div className="flex items-center gap-4">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={testEmail}
+                                disabled={emailTest.status === 'testing' || !emailConfigured}
+                            >
+                                {emailTest.status === 'testing' ? (
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                ) : (
+                                    <Zap className="w-4 h-4 mr-2" />
+                                )}
+                                Send Test Email
+                            </Button>
+                            {emailTest.status === 'success' && (
+                                <span className="text-green-600 flex items-center gap-1 text-sm">
+                                    <CheckCircle className="w-4 h-4" /> {emailTest.message}
+                                </span>
+                            )}
+                            {emailTest.status === 'error' && (
+                                <span className="text-red-600 flex items-center gap-1 text-sm">
+                                    <AlertCircle className="w-4 h-4" /> {emailTest.message}
+                                </span>
+                            )}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
