@@ -45,19 +45,34 @@ export default async function CleanerDashboard() {
         );
     }
 
-    const earnings = 1250.50;
-    const _jobsDone = cleaner.jobsCompleted;
-    const _rating = cleaner.rating;
+    // Calculate real earnings from completed bookings
+    const PROVIDER_SHARE = 0.83; // 83% goes to cleaner (platform 15% + insurance 2%)
+    const completedBookings = await prisma.booking.findMany({
+        where: {
+            assignments: {
+                some: {
+                    cleanerId: cleaner.id,
+                    status: AssignmentStatus.ACCEPTED
+                }
+            },
+            status: BookingStatus.COMPLETED
+        },
+        select: { totalPrice: true }
+    });
+
+    const earnings = completedBookings.reduce((sum, b) => sum + (b.totalPrice * PROVIDER_SHARE), 0);
+
     const upcomingAssignments = cleaner.assignments.filter(a =>
         a.booking.status !== BookingStatus.COMPLETED && a.booking.status !== BookingStatus.CANCELLED
     );
 
     const stats = [
-        { title: 'Total Earnings', value: formatCurrency(earnings), icon: DollarSign, color: 'primary', trend: '+12%' },
+        { title: 'Total Earnings', value: formatCurrency(earnings), icon: DollarSign, color: 'primary' },
         { title: 'Acceptance Rate', value: `${(cleaner.acceptanceRate * 100).toFixed(0)}%`, icon: TrendingUp, color: 'accent' },
         { title: 'Quality Score', value: cleaner.qualityScore.toFixed(1), icon: Star, color: 'warning' },
         { title: 'Completed Jobs', value: cleaner.totalJobsCompleted.toString(), icon: Briefcase, color: 'primary' },
     ];
+
 
     return (
         <div className="space-y-8">
@@ -86,12 +101,6 @@ export default async function CleanerDashboard() {
                                 }`}>
                                 <stat.icon className="w-5 h-5" />
                             </div>
-                            {stat.trend && (
-                                <div className="flex items-center gap-1 text-xs font-medium text-[var(--accent)]">
-                                    <TrendingUp className="w-3 h-3" />
-                                    {stat.trend}
-                                </div>
-                            )}
                         </div>
                         <div className="text-2xl font-bold">{stat.value}</div>
                         <div className="text-sm text-[var(--text-muted)]">{stat.title}</div>

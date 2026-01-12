@@ -110,6 +110,52 @@ async function markReferenceVerified(refId: string) {
     revalidatePath('/admin/users/cleaner');
 }
 
+async function requestDocumentResubmission(id: string, reason: string, documentsNeeded: string[]) {
+    'use server';
+    const cleaner = await prisma.cleanerProfile.update({
+        where: { id },
+        data: {
+            verificationStatus: 'DOCUMENTS_NEEDED',
+            documentRequestReason: reason,
+            documentRequestedAt: new Date(),
+            documentsRequested: JSON.stringify(documentsNeeded), // Store as JSON array
+        },
+        include: {
+            user: true,
+        }
+    });
+
+    // Send email notification
+    await sendEmailNotification(cleaner.userId, {
+        to: cleaner.user.email,
+        subject: '📄 Action Required: Document Resubmission Needed',
+        html: `
+            <h1>Hello ${cleaner.user.firstName},</h1>
+            <p>We've reviewed your application and need you to resubmit some documents.</p>
+            <p><strong>Reason:</strong> ${reason}</p>
+            <p><strong>Documents needed:</strong></p>
+            <ul>
+                ${documentsNeeded.map(doc => `<li>${doc.replace('_', ' ')}</li>`).join('')}
+            </ul>
+            <p>Please log in to your dashboard to upload the requested documents:</p>
+            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/cleaner/onboarding" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Upload Documents</a></p>
+            <p>Thank you for your cooperation.</p>
+            <p>Best regards,<br/>The Fixelo Team</p>
+        `,
+    });
+
+    // Send SMS notification
+    if (cleaner.user.phone) {
+        await sendSMSNotification(
+            cleaner.userId,
+            cleaner.user.phone,
+            `Fixelo: We need you to resubmit some documents. Check your email (${cleaner.user.email}) for details.`
+        );
+    }
+
+    revalidatePath(`/admin/users/cleaner/${id}`);
+}
+
 export default async function CleanerReviewPage({ params }: { params: { id: string } }) {
     const cleaner = await prisma.cleanerProfile.findUnique({
         where: { id: params.id },
@@ -142,6 +188,19 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
 
                 {cleaner.verificationStatus !== 'APPROVED' && cleaner.verificationStatus !== 'REJECTED' && (
                     <div className="flex gap-3">
+                        <form action={async () => {
+                            'use server';
+                            await requestDocumentResubmission(
+                                cleaner.id,
+                                'Document image quality is insufficient or document has expired',
+                                ['PHOTO_ID']
+                            );
+                        }}>
+                            <Button variant="outline" type="submit" className="border-orange-200 text-orange-600 hover:bg-orange-50">
+                                <FileText className="w-4 h-4 mr-2" />
+                                Request Resubmission
+                            </Button>
+                        </form>
                         <form action={rejectAction}>
                             <Button variant="outline" type="submit" className="border-red-200 text-red-600 hover:bg-red-50">
                                 <XCircle className="w-4 h-4 mr-2" />
@@ -184,7 +243,9 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
             )}
 
             <div className="grid gap-6 md:grid-cols-2">
-                {/* Personal Information */}
+                {/* Personal Information
+
+ */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -213,9 +274,28 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
                                 {cleaner.user.email}
                             </p>
                         </div>
+
+                        {/* Business Type */}
                         <div>
-                            <span className="text-sm text-muted-foreground">SSN (Last 4)</span>
-                            <p className="font-medium">••••{cleaner.ssnLast4 || 'N/A'}</p>
+                            <span className="text-sm text-muted-foreground">Business Type</span>
+                            <p className="font-medium">
+                                {cleaner.businessType === 'COMPANY' ? '🏢 Company' : '👤 Individual'}
+                            </p>
+                        </div>
+
+                        {/* Tax ID */}
+                        <div>
+                            <span className="text-sm text-muted-foreground">Tax ID ({cleaner.taxIdType || 'SSN'})</span>
+                            <p className="font-medium">
+                                {cleaner.taxIdType === 'EIN' && cleaner.ein
+                                    ? `EIN: ••-•••${cleaner.ein.slice(-4)}`
+                                    : cleaner.taxIdType === 'ITIN' && cleaner.itin
+                                        ? `ITIN: ••••${cleaner.itin}`
+                                        : cleaner.ssnLast4
+                                            ? `SSN: ••••${cleaner.ssnLast4}`
+                                            : 'N/A'
+                                }
+                            </p>
                         </div>
                     </CardContent>
                 </Card>

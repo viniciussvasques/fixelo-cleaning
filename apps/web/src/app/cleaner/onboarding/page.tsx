@@ -19,6 +19,10 @@ export default async function OnboardingPage() {
         if (existingProfile.verificationStatus === 'APPROVED') {
             redirect('/cleaner/dashboard');
         }
+        // If documents need resubmission
+        if (existingProfile.verificationStatus === 'DOCUMENTS_NEEDED') {
+            redirect('/cleaner/onboarding/documents-needed');
+        }
         // If pending/under review, go to pending page
         if (existingProfile.submittedAt) {
             redirect('/cleaner/onboarding/pending');

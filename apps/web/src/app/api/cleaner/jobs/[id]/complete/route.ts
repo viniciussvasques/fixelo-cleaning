@@ -18,7 +18,10 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
 
         const bookingId = params.id;
@@ -29,7 +32,10 @@ export async function POST(
         });
 
         if (!cleaner) {
-            return NextResponse.json({ error: 'Not a cleaner' }, { status: 403 });
+            return NextResponse.json(
+                { error: { code: 'CLEANER_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
         }
 
         const assignment = await prisma.cleanerAssignment.findFirst({
@@ -41,7 +47,10 @@ export async function POST(
         });
 
         if (!assignment) {
-            return NextResponse.json({ error: 'Not assigned to this job' }, { status: 403 });
+            return NextResponse.json(
+                { error: { code: 'NOT_ASSIGNED', message: 'You are not assigned to this job' } },
+                { status: 403 }
+            );
         }
 
         // Get optional completion data
@@ -83,7 +92,7 @@ export async function POST(
     } catch (error) {
         console.error('[JobComplete] Error:', error);
         return NextResponse.json(
-            { error: 'Failed to complete job' },
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to complete job' } },
             { status: 500 }
         );
     }

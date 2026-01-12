@@ -8,10 +8,10 @@ const socialSchema = z.object({
     instagramHandle: z.string().optional(),
     websiteUrl: z.string().optional(),
     references: z.array(z.object({
-        name: z.string().min(2),
-        phone: z.string().min(10),
-        relationship: z.string().min(2),
-    })).min(2),
+        name: z.string().min(2, 'Reference name is required'),
+        phone: z.string().min(10, 'Valid phone number required'),
+        relationship: z.string().min(2, 'Relationship is required'),
+    })).min(2, 'At least 2 references are required'),
 });
 
 export async function POST(req: Request) {
@@ -19,14 +19,21 @@ export async function POST(req: Request) {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
 
         const body = await req.json();
         const validation = socialSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json({ message: 'Invalid data', errors: validation.error.errors }, { status: 400 });
+            const firstError = validation.error.issues[0];
+            return NextResponse.json(
+                { error: { code: 'VALIDATION_ERROR', message: firstError.message, field: firstError.path.join('.') } },
+                { status: 400 }
+            );
         }
 
         const { linkedinProfile, instagramHandle, websiteUrl, references } = validation.data;
@@ -36,7 +43,10 @@ export async function POST(req: Request) {
         });
 
         if (!profile) {
-            return NextResponse.json({ message: 'Profile not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: { code: 'PROFILE_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
         }
 
         // Update cleaner profile with social links
@@ -64,9 +74,15 @@ export async function POST(req: Request) {
             }))
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            message: 'Social information and references saved successfully'
+        });
     } catch (error) {
-        console.error('Social step error:', error);
-        return NextResponse.json({ message: 'Internal error' }, { status: 500 });
+        console.error('[Social] Error:', error);
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to save social information' } },
+            { status: 500 }
+        );
     }
 }

@@ -7,7 +7,10 @@ export async function POST(req: Request) {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
 
         const profile = await prisma.cleanerProfile.findUnique({
@@ -15,26 +18,45 @@ export async function POST(req: Request) {
         });
 
         if (!profile) {
-            return NextResponse.json({ message: 'Profile not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: { code: 'PROFILE_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
         }
 
-        // For MVP, we accept FormData but don't actually upload to S3 yet
+        // Parse FormData
         const formData = await req.formData();
         const insuranceDoc = formData.get('insuranceDoc') as File | null;
+
+        // TODO: In production, upload document to S3/Cloudinary
+        // For MVP, we store a placeholder URL
+        // Example production code:
+        // let insuranceDocUrl = null;
+        // if (insuranceDoc) {
+        //     const uploadResult = await uploadToS3(insuranceDoc, `cleaners/${profile.id}/insurance`);
+        //     insuranceDocUrl = uploadResult.url;
+        // }
+        const insuranceDocUrl = insuranceDoc ? `/uploads/placeholder-insurance-${profile.id}.pdf` : null;
 
         // Update profile
         await prisma.cleanerProfile.update({
             where: { id: profile.id },
             data: {
                 hasInsurance: !!insuranceDoc,
-                insuranceDocUrl: insuranceDoc ? '/placeholder-insurance.pdf' : null, // Would be S3 URL
+                insuranceDocUrl: insuranceDocUrl,
                 onboardingStep: 4,
             }
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            message: 'Documents saved successfully'
+        });
     } catch (error) {
-        console.error('Documents step error:', error);
-        return NextResponse.json({ message: 'Internal error' }, { status: 500 });
+        console.error('[Documents] Error:', error);
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to save documents' } },
+            { status: 500 }
+        );
     }
 }

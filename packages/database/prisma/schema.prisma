@@ -163,8 +163,10 @@ model CleanerProfile {
   // Onboarding & Verification
   stripeAccountId       String?        @unique
   businessType          String?        // 'INDIVIDUAL' | 'COMPANY'
-  ein                   String?        // Encrypted ideally, or last 4
-  ssnLast4              String?
+  taxIdType             String?        // 'SSN' | 'ITIN' | 'EIN' - which type of tax ID
+  ein                   String?        // Full EIN for companies (9 digits)
+  ssnLast4              String?        // Last 4 of SSN
+  itin                  String?        // Full ITIN or last 4 for individuals without SSN
   
   yearsOfExperience     Int            @default(0)
   hasInsurance          Boolean        @default(false)
@@ -187,6 +189,11 @@ model CleanerProfile {
   verificationStatus    String         @default("PENDING") // PENDING, DOCUMENTS_NEEDED, UNDER_REVIEW, BACKGROUND_CHECK, APPROVED, REJECTED
   onboardingCompleted   Boolean        @default(false)
   onboardingStep        Int            @default(1)         // Track current step (1-5)
+  
+  // Document Resubmission Request
+  documentRequestReason String?        // Reason why documents need to be resubmitted
+  documentRequestedAt   DateTime?      // When the resubmission was requested
+  documentsRequested    String?        // JSON array of document types needed: ['PHOTO_ID', 'INSURANCE', 'BACKGROUND']
   
   // Verification Timeline
   submittedAt           DateTime?

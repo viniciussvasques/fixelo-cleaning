@@ -9,13 +9,29 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Upload, CreditCard, Calendar } from 'lucide-react';
+import { Loader2, Upload, CreditCard, Calendar, Building2, User } from 'lucide-react';
 
 const identitySchema = z.object({
     dateOfBirth: z.string().min(1, 'Date of birth is required'),
-    ssnLast4: z.string().length(4, 'Enter last 4 digits of SSN'),
+    businessType: z.enum(['INDIVIDUAL', 'COMPANY']),
+    taxIdType: z.enum(['SSN', 'ITIN', 'EIN']),
+    taxIdValue: z.string().min(4, 'Tax ID is required'),
     photoIdType: z.enum(['DRIVERS_LICENSE', 'PASSPORT', 'STATE_ID']),
+}).refine((data) => {
+    // EIN only valid for COMPANY
+    if (data.taxIdType === 'EIN' && data.businessType !== 'COMPANY') {
+        return false;
+    }
+    // SSN and ITIN only for INDIVIDUAL
+    if ((data.taxIdType === 'SSN' || data.taxIdType === 'ITIN') && data.businessType === 'COMPANY') {
+        return false;
+    }
+    return true;
+}, {
+    message: 'Invalid tax ID type for business type',
+    path: ['taxIdType'],
 });
 
 type IdentityFormData = z.infer<typeof identitySchema>;
@@ -24,18 +40,35 @@ export default function IdentityStep() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [idDocument, setIdDocument] = useState<File | null>(null);
+    const [businessType, setBusinessType] = useState<'INDIVIDUAL' | 'COMPANY'>('INDIVIDUAL');
 
     const {
         register,
         handleSubmit,
         setValue,
+        watch,
         formState: { errors },
     } = useForm<IdentityFormData>({
         resolver: zodResolver(identitySchema),
         defaultValues: {
+            businessType: 'INDIVIDUAL',
+            taxIdType: 'SSN',
             photoIdType: 'DRIVERS_LICENSE',
         }
     });
+
+    const selectedTaxIdType = watch('taxIdType');
+
+    const handleBusinessTypeChange = (value: 'INDIVIDUAL' | 'COMPANY') => {
+        setBusinessType(value);
+        setValue('businessType', value);
+        // Set appropriate default tax ID type
+        if (value === 'COMPANY') {
+            setValue('taxIdType', 'EIN');
+        } else {
+            setValue('taxIdType', 'SSN');
+        }
+    };
 
     const onSubmit = async (data: IdentityFormData) => {
         if (!idDocument) {
@@ -45,10 +78,11 @@ export default function IdentityStep() {
 
         setIsSubmitting(true);
         try {
-            // For MVP, we'll just store the metadata. Real upload would go to S3/Cloudinary
             const formData = new FormData();
             formData.append('dateOfBirth', data.dateOfBirth);
-            formData.append('ssnLast4', data.ssnLast4);
+            formData.append('businessType', data.businessType);
+            formData.append('taxIdType', data.taxIdType);
+            formData.append('taxIdValue', data.taxIdValue);
             formData.append('photoIdType', data.photoIdType);
             formData.append('idDocument', idDocument);
 
@@ -59,7 +93,7 @@ export default function IdentityStep() {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.message || 'Failed to save');
+                throw new Error(error.error?.message || 'Failed to save');
             }
 
             toast.success('Identity information saved!');
@@ -79,6 +113,42 @@ export default function IdentityStep() {
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md mx-auto">
+                {/* Business Type Selection */}
+                <div className="space-y-3">
+                    <Label>Are you registering as:</Label>
+                    <RadioGroup
+                        defaultValue="INDIVIDUAL"
+                        onValueChange={(value) => handleBusinessTypeChange(value as 'INDIVIDUAL' | 'COMPANY')}
+                        className="grid grid-cols-2 gap-4"
+                    >
+                        <Label
+                            htmlFor="individual"
+                            className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${businessType === 'INDIVIDUAL'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-slate-200 hover:border-slate-300'
+                                }`}
+                        >
+                            <RadioGroupItem value="INDIVIDUAL" id="individual" className="sr-only" />
+                            <User className={`w-8 h-8 mb-2 ${businessType === 'INDIVIDUAL' ? 'text-blue-600' : 'text-slate-400'}`} />
+                            <span className="font-medium">Individual</span>
+                            <span className="text-xs text-slate-500">Self-employed</span>
+                        </Label>
+                        <Label
+                            htmlFor="company"
+                            className={`flex flex-col items-center justify-center p-4 rounded-xl border-2 cursor-pointer transition-all ${businessType === 'COMPANY'
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-slate-200 hover:border-slate-300'
+                                }`}
+                        >
+                            <RadioGroupItem value="COMPANY" id="company" className="sr-only" />
+                            <Building2 className={`w-8 h-8 mb-2 ${businessType === 'COMPANY' ? 'text-blue-600' : 'text-slate-400'}`} />
+                            <span className="font-medium">Business</span>
+                            <span className="text-xs text-slate-500">LLC, Corp, etc.</span>
+                        </Label>
+                    </RadioGroup>
+                </div>
+
+                {/* Date of Birth */}
                 <div className="space-y-2">
                     <Label htmlFor="dateOfBirth">Date of Birth</Label>
                     <div className="relative">
@@ -95,30 +165,68 @@ export default function IdentityStep() {
                     )}
                 </div>
 
+                {/* Tax ID Type Selection (for Individual) */}
+                {businessType === 'INDIVIDUAL' && (
+                    <div className="space-y-2">
+                        <Label>Tax ID Type</Label>
+                        <RadioGroup
+                            defaultValue="SSN"
+                            onValueChange={(value: string) => setValue('taxIdType', value as 'SSN' | 'ITIN')}
+                            className="flex gap-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="SSN" id="ssn" />
+                                <Label htmlFor="ssn" className="cursor-pointer">SSN</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="ITIN" id="itin" />
+                                <Label htmlFor="itin" className="cursor-pointer">ITIN</Label>
+                            </div>
+                        </RadioGroup>
+                        <p className="text-xs text-slate-500">
+                            {selectedTaxIdType === 'SSN'
+                                ? 'Social Security Number (for US citizens/residents)'
+                                : 'Individual Taxpayer Identification Number (for non-residents)'}
+                        </p>
+                    </div>
+                )}
+
+                {/* Tax ID Value */}
                 <div className="space-y-2">
-                    <Label htmlFor="ssnLast4">Last 4 Digits of SSN</Label>
+                    <Label htmlFor="taxIdValue">
+                        {businessType === 'COMPANY'
+                            ? 'EIN (Employer Identification Number)'
+                            : selectedTaxIdType === 'SSN'
+                                ? 'Last 4 Digits of SSN'
+                                : 'ITIN Number'}
+                    </Label>
                     <div className="relative">
                         <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <Input
-                            id="ssnLast4"
-                            type="password"
-                            maxLength={4}
-                            placeholder="••••"
+                            id="taxIdValue"
+                            type={businessType === 'INDIVIDUAL' ? 'password' : 'text'}
+                            maxLength={businessType === 'COMPANY' ? 10 : 4}
+                            placeholder={businessType === 'COMPANY' ? 'XX-XXXXXXX' : '••••'}
                             className="pl-10"
-                            {...register('ssnLast4')}
+                            {...register('taxIdValue')}
                         />
                     </div>
-                    {errors.ssnLast4 && (
-                        <p className="text-sm text-red-500">{errors.ssnLast4.message}</p>
+                    {errors.taxIdValue && (
+                        <p className="text-sm text-red-500">{errors.taxIdValue.message}</p>
                     )}
-                    <p className="text-xs text-slate-500">We only store the last 4 digits, encrypted</p>
+                    <p className="text-xs text-slate-500">
+                        {businessType === 'COMPANY'
+                            ? 'Enter your 9-digit EIN'
+                            : 'We only store the last 4 digits, encrypted'}
+                    </p>
                 </div>
 
+                {/* Photo ID Type */}
                 <div className="space-y-2">
                     <Label>ID Document Type</Label>
                     <Select
                         defaultValue="DRIVERS_LICENSE"
-                        onValueChange={(value) => setValue('photoIdType', value as any)}
+                        onValueChange={(value: string) => setValue('photoIdType', value as 'DRIVERS_LICENSE' | 'PASSPORT' | 'STATE_ID')}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Select ID type" />
@@ -131,6 +239,7 @@ export default function IdentityStep() {
                     </Select>
                 </div>
 
+                {/* File Upload */}
                 <div className="space-y-2">
                     <Label>Upload ID Document</Label>
                     <div
@@ -181,3 +290,4 @@ export default function IdentityStep() {
         </div>
     );
 }
+

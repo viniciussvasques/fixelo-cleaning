@@ -11,7 +11,10 @@ export async function GET(req: Request) {
         // Get authenticated user
         const session = await auth();
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
         const userId = session.user.id;
 
@@ -21,7 +24,10 @@ export async function GET(req: Request) {
         });
 
         if (!cleaner) {
-            return new NextResponse("Cleaner profile not found", { status: 404 });
+            return NextResponse.json(
+                { error: { code: 'CLEANER_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
         }
 
         // Build query based on status
@@ -61,7 +67,10 @@ export async function GET(req: Request) {
         return NextResponse.json({ jobs: assignments });
 
     } catch (error) {
-        console.error('Fetch jobs error:', error);
-        return new NextResponse("Internal Error", { status: 500 });
+        console.error('[Jobs] Error:', error);
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch jobs' } },
+            { status: 500 }
+        );
     }
 }

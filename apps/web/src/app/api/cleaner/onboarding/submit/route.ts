@@ -7,7 +7,10 @@ export async function POST() {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
 
         const profile = await prisma.cleanerProfile.findUnique({
@@ -15,7 +18,18 @@ export async function POST() {
         });
 
         if (!profile) {
-            return NextResponse.json({ message: 'Profile not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: { code: 'PROFILE_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
+        }
+
+        // Validate that all onboarding steps are complete
+        if (profile.onboardingStep < 5) {
+            return NextResponse.json(
+                { error: { code: 'INCOMPLETE_ONBOARDING', message: 'Please complete all onboarding steps before submitting' } },
+                { status: 400 }
+            );
         }
 
         // Mark onboarding as complete and submit for review
@@ -28,9 +42,15 @@ export async function POST() {
             }
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            message: 'Application submitted successfully. We will review and get back to you within 2-3 business days.'
+        });
     } catch (error) {
-        console.error('Submit error:', error);
-        return NextResponse.json({ message: 'Internal error' }, { status: 500 });
+        console.error('[Submit] Error:', error);
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to submit application' } },
+            { status: 500 }
+        );
     }
 }

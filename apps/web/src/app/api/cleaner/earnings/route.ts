@@ -7,7 +7,10 @@ export async function GET() {
     try {
         const session = await auth();
         if (!session?.user?.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
 
         const cleaner = await prisma.cleanerProfile.findUnique({
@@ -15,7 +18,10 @@ export async function GET() {
         });
 
         if (!cleaner) {
-            return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: { code: 'CLEANER_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
         }
 
         const now = new Date();
@@ -23,6 +29,14 @@ export async function GET() {
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
+
+        // Get financial settings from database
+        const financialSettings = await prisma.financialSettings.findFirst();
+        const platformFeePercent = financialSettings?.platformFeePercent ?? 0.15;
+        const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+
+        // Calculate provider share (what cleaner keeps after fees)
+        const PROVIDER_SHARE = 1 - platformFeePercent - insuranceFeePercent;
 
         // Fetch completed bookings for calculations
         const bookings = await prisma.booking.findMany({
@@ -45,11 +59,6 @@ export async function GET() {
             orderBy: { scheduledDate: 'desc' }
         });
 
-        // Mock Calculation Logic (Server-side should ideally use the FinancialSettings)
-        // Platform Fee 15%, Insurance 2% = 17% deduction approx.
-        // Let's implement a consistent calculator helper in the future.
-        const PROVIDER_SHARE = 0.83;
-
         const calculateNet = (amount: number) => amount * PROVIDER_SHARE;
 
         let thisWeek = 0;
@@ -57,7 +66,13 @@ export async function GET() {
         let lifetime = 0;
         let pending = 0;
 
-        const pendingEarnings = [];
+        const pendingEarnings: Array<{
+            id: string;
+            date: Date;
+            service: string;
+            amount: number;
+            status: string;
+        }> = [];
 
         for (const booking of bookings) {
             const net = calculateNet(booking.totalPrice);
@@ -99,11 +114,20 @@ export async function GET() {
                 lifetime
             },
             pendingEarnings,
-            payouts
+            payouts,
+            // Include breakdown info for transparency
+            feeBreakdown: {
+                platformFeePercent,
+                insuranceFeePercent,
+                cleanerSharePercent: PROVIDER_SHARE
+            }
         });
 
     } catch (error) {
-        console.error('Earnings error:', error);
-        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+        console.error('[Earnings] Error:', error);
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch earnings' } },
+            { status: 500 }
+        );
     }
 }

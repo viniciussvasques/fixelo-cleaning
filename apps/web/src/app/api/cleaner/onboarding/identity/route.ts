@@ -1,25 +1,73 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { auth } from '@/lib/auth';
+import { z } from 'zod';
+
+const identitySchema = z.object({
+    dateOfBirth: z.string().min(1, 'Date of birth is required'),
+    businessType: z.enum(['INDIVIDUAL', 'COMPANY']),
+    taxIdType: z.enum(['SSN', 'ITIN', 'EIN']),
+    taxIdValue: z.string().min(4, 'Tax ID is required'),
+    photoIdType: z.enum(['DRIVERS_LICENSE', 'PASSPORT', 'STATE_ID']),
+});
 
 export async function POST(req: Request) {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+            return NextResponse.json(
+                { error: { code: 'UNAUTHORIZED', message: 'Authentication required' } },
+                { status: 401 }
+            );
         }
 
-        // For MVP, we accept FormData but don't actually upload to S3 yet
-        // In production, use multer or similar to handle file uploads
+        // Parse FormData
         const formData = await req.formData();
         const dateOfBirth = formData.get('dateOfBirth') as string;
-        const ssnLast4 = formData.get('ssnLast4') as string;
+        const businessType = formData.get('businessType') as string;
+        const taxIdType = formData.get('taxIdType') as string;
+        const taxIdValue = formData.get('taxIdValue') as string;
         const photoIdType = formData.get('photoIdType') as string;
-        // const idDocument = formData.get('idDocument') as File; // Would upload to S3
+        const idDocument = formData.get('idDocument') as File | null;
 
-        if (!dateOfBirth || !ssnLast4 || !photoIdType) {
-            return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+        // Validate with Zod
+        const validation = identitySchema.safeParse({
+            dateOfBirth,
+            businessType,
+            taxIdType,
+            taxIdValue,
+            photoIdType
+        });
+
+        if (!validation.success) {
+            const firstError = validation.error.issues[0];
+            return NextResponse.json(
+                { error: { code: 'VALIDATION_ERROR', message: firstError.message, field: firstError.path[0] } },
+                { status: 400 }
+            );
+        }
+
+        // Cross-validate business type and tax ID type
+        if (taxIdType === 'EIN' && businessType !== 'COMPANY') {
+            return NextResponse.json(
+                { error: { code: 'VALIDATION_ERROR', message: 'EIN is only valid for companies', field: 'taxIdType' } },
+                { status: 400 }
+            );
+        }
+
+        if ((taxIdType === 'SSN' || taxIdType === 'ITIN') && businessType === 'COMPANY') {
+            return NextResponse.json(
+                { error: { code: 'VALIDATION_ERROR', message: 'Companies must use EIN', field: 'taxIdType' } },
+                { status: 400 }
+            );
+        }
+
+        if (!idDocument) {
+            return NextResponse.json(
+                { error: { code: 'MISSING_DOCUMENT', message: 'ID document is required', field: 'idDocument' } },
+                { status: 400 }
+            );
         }
 
         const profile = await prisma.cleanerProfile.findUnique({
@@ -27,24 +75,50 @@ export async function POST(req: Request) {
         });
 
         if (!profile) {
-            return NextResponse.json({ message: 'Profile not found' }, { status: 404 });
+            return NextResponse.json(
+                { error: { code: 'PROFILE_NOT_FOUND', message: 'Cleaner profile not found' } },
+                { status: 404 }
+            );
+        }
+
+        // TODO: In production, upload document to S3/Cloudinary and store URL
+        // For MVP, we store a placeholder URL
+        const idDocumentUrl = `/uploads/placeholder-id-${profile.id}.pdf`;
+
+        // Prepare data based on tax ID type
+        const updateData: any = {
+            businessType,
+            taxIdType,
+            photoIdType,
+            idDocumentUrl,
+            onboardingStep: 3,
+        };
+
+        // Store tax ID value in appropriate field
+        if (taxIdType === 'EIN') {
+            updateData.ein = taxIdValue; // Store full EIN for companies
+        } else if (taxIdType === 'ITIN') {
+            updateData.itin = taxIdValue; // Store last 4 of ITIN
+        } else if (taxIdType === 'SSN') {
+            updateData.ssnLast4 = taxIdValue; // Store last 4 of SSN
         }
 
         // Update profile with identity info
-        // In production: encrypt SSN, upload ID to S3, store URL
+        // TODO: In production, encrypt sensitive tax IDs before storing
         await prisma.cleanerProfile.update({
             where: { id: profile.id },
-            data: {
-                ssnLast4: ssnLast4, // Should be encrypted in production
-                photoIdType: photoIdType,
-                idDocumentUrl: '/placeholder-id-doc.pdf', // Would be S3 URL
-                onboardingStep: 3,
-            }
+            data: updateData
         });
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({
+            success: true,
+            message: 'Identity information saved successfully'
+        });
     } catch (error) {
-        console.error('Identity step error:', error);
-        return NextResponse.json({ message: 'Internal error' }, { status: 500 });
+        console.error('[Identity] Error:', error);
+        return NextResponse.json(
+            { error: { code: 'INTERNAL_ERROR', message: 'Failed to save identity information' } },
+            { status: 500 }
+        );
     }
 }
