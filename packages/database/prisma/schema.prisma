@@ -690,13 +690,46 @@ model SystemConfig {
 // ============================================
 
 model FinancialSettings {
-  payoutSchedule        String   @default("WEEKLY")
-  payoutDay             String   @default("FRIDAY")
-  minPayoutAmount       Float    @default(50)
-  holdDaysAfterService  Int      @default(2)
-  requireCustomerReview Boolean  @default(true)
+  id                      String   @id @default(uuid())
   
-  updatedAt             DateTime @updatedAt
+  // Fees
+  platformFeePercent      Float    @default(0.15)
+  stripeFeePercent        Float    @default(0.029)
+  stripeFeeFixed          Float    @default(0.30)
+  insuranceFeePercent     Float    @default(0.02)
+  
+  // Minimum Booking
+  minBookingAmount        Float    @default(60)
+  
+  // Recurring Discounts
+  weeklyDiscount          Float    @default(0.15)
+  biweeklyDiscount        Float    @default(0.10)
+  monthlyDiscount         Float    @default(0.05)
+  
+  // Cancellation Policy
+  freeCancelHours         Int      @default(24)
+  lateCancelFeePercent    Float    @default(0.50)
+  cleanerStrikePenalty    Float    @default(25)
+  maxStrikes              Int      @default(3)
+  
+  // Quality Guarantee
+  autoRefundThreshold     Int      @default(2)
+  recleanWindowHours      Int      @default(48)
+  
+  // Payouts
+  autoPayoutEnabled       Boolean  @default(true)
+  payoutSchedule          String   @default("WEEKLY")
+  payoutDay               String   @default("FRIDAY")
+  minPayoutAmount         Float    @default(50)
+  holdDaysAfterService    Int      @default(2)
+  requireCustomerReview   Boolean  @default(true)
+  
+  // Job Execution
+  requiredBeforePhotos    Int      @default(2)
+  requiredAfterPhotos     Int      @default(3)
+  geofenceRadiusMeters    Int      @default(100)
+  
+  updatedAt               DateTime @updatedAt
 }
 
 // ============================================
