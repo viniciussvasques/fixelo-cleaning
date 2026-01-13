@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateSystemConfig } from "./actions";
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
     const configs = await prisma.systemConfig.findMany({
         where: {

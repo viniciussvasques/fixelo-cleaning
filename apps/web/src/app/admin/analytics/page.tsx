@@ -10,6 +10,8 @@ import { StatCard } from '@/components/ui/stat-card';
 import { formatCurrency } from '@/lib/constants';
 import { BookingStatus } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 
 export default async function AnalyticsPage() {
     // Revenue analytics
