@@ -2,8 +2,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@fixelo/database";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
-import { 
-    Calendar, DollarSign, MapPin, Clock, Briefcase, Star, 
+import {
+    Calendar, DollarSign, MapPin, Clock, Briefcase, Star,
     TrendingUp, ArrowRight, AlertCircle, CheckCircle, FileText,
     Navigation, Phone, ChevronRight, Sparkles, Target, Award
 } from "lucide-react";
@@ -47,8 +47,8 @@ export default async function CleanerDashboard() {
                 <p className="text-gray-500 mb-6 max-w-sm">
                     You need to complete onboarding to start accepting jobs and earning money.
                 </p>
-                <Link 
-                    href="/cleaner/onboarding" 
+                <Link
+                    href="/cleaner/onboarding"
                     className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25"
                 >
                     Complete Onboarding
@@ -57,8 +57,12 @@ export default async function CleanerDashboard() {
         );
     }
 
-    // Calculate real earnings
-    const PROVIDER_SHARE = 0.83;
+    // Calculate real earnings - Get fee settings from database
+    const financialSettings = await prisma.financialSettings.findFirst();
+    const platformFeePercent = financialSettings?.platformFeePercent ?? 0.15;
+    const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+    const PROVIDER_SHARE = 1 - platformFeePercent - insuranceFeePercent; // e.g., 1 - 0.15 - 0.02 = 0.83
+
     const now = new Date();
     const startOfWeek = new Date(now);
     startOfWeek.setDate(now.getDate() - now.getDay());
@@ -90,9 +94,9 @@ export default async function CleanerDashboard() {
     ]);
 
     const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.totalPrice * PROVIDER_SHARE), 0);
-    
+
     const upcomingAssignments = cleaner.assignments.filter(a =>
-        a.booking.status !== BookingStatus.COMPLETED && 
+        a.booking.status !== BookingStatus.COMPLETED &&
         a.booking.status !== BookingStatus.CANCELLED &&
         a.status === AssignmentStatus.ACCEPTED
     );
@@ -103,13 +107,13 @@ export default async function CleanerDashboard() {
     // Verification Banner
     const VerificationBanner = () => {
         if (cleaner.verificationStatus === 'APPROVED') return null;
-        
+
         const config: Record<string, { bg: string; icon: typeof AlertCircle; color: string; title: string; desc: string; action?: { label: string; href: string } }> = {
             PENDING: { bg: 'bg-amber-50', icon: Clock, color: 'text-amber-600', title: 'Verification Pending', desc: 'Your profile is under review.' },
             UNDER_REVIEW: { bg: 'bg-blue-50', icon: FileText, color: 'text-blue-600', title: 'Under Review', desc: 'Our team is reviewing your application.' },
-            DOCUMENTS_NEEDED: { 
-                bg: 'bg-orange-50', icon: AlertCircle, color: 'text-orange-600', 
-                title: 'Documents Required', 
+            DOCUMENTS_NEEDED: {
+                bg: 'bg-orange-50', icon: AlertCircle, color: 'text-orange-600',
+                title: 'Documents Required',
                 desc: cleaner.documentRequestReason || 'Please upload required documents.',
                 action: { label: 'Upload Now', href: '/cleaner/onboarding/documents-needed' }
             },
@@ -220,7 +224,7 @@ export default async function CleanerDashboard() {
                                 <p className="text-xs text-gray-400">Your earnings</p>
                             </div>
                         </div>
-                        
+
                         {nextJob.booking.address && (
                             <div className="flex items-start gap-2 text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-xl">
                                 <MapPin className="w-4 h-4 mt-0.5 text-gray-400 flex-shrink-0" />
@@ -234,7 +238,7 @@ export default async function CleanerDashboard() {
                         {/* Quick Actions */}
                         <div className="flex gap-2">
                             {nextJob.booking.address && (
-                                <a 
+                                <a
                                     href={`https://maps.google.com/?q=${encodeURIComponent(`${nextJob.booking.address.street}, ${nextJob.booking.address.city}, ${nextJob.booking.address.state}`)}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
@@ -245,7 +249,7 @@ export default async function CleanerDashboard() {
                                 </a>
                             )}
                             {nextJob.booking.user.phone && (
-                                <a 
+                                <a
                                     href={`tel:${nextJob.booking.user.phone}`}
                                     className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium text-sm hover:bg-gray-200 transition-colors"
                                 >
@@ -253,7 +257,7 @@ export default async function CleanerDashboard() {
                                     Call Client
                                 </a>
                             )}
-                            <Link 
+                            <Link
                                 href={`/cleaner/jobs/${nextJob.id}`}
                                 className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-green-700 transition-colors"
                             >

@@ -161,7 +161,13 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                                     ) : null}
 
                                     {booking.status !== 'COMPLETED' && (
-                                        <Button className="w-full mt-4" variant="destructive">Cancel Job</Button>
+                                        <form action={async () => {
+                                            'use server';
+                                            const { cancelJobByAssignmentId } = await import('../../actions');
+                                            await cancelJobByAssignmentId(params.id);
+                                        }}>
+                                            <Button type="submit" className="w-full mt-4" variant="destructive">Cancel Job</Button>
+                                        </form>
                                     )}
                                 </div>
                             ) : (

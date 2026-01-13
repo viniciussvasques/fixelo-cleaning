@@ -18,6 +18,8 @@ export const dynamic = 'force-dynamic';
 interface FinancialSettings {
     platformFeePercent: number;
     insuranceFeePercent: number;
+    stripeFeePercent: number;
+    stripeFeeFixed: number;
     autoPayoutEnabled: boolean;
     payoutSchedule: string;
     payoutDay: string;
@@ -48,8 +50,8 @@ export default function FinancialSettingsPage() {
     const [testAmount, setTestAmount] = useState(180);
     const platformFeePercent = watch('platformFeePercent') || 15;
     const insuranceFeePercent = watch('insuranceFeePercent') || 2;
-    const stripeFeePercent = 2.9;
-    const stripeFeeFixed = 0.30;
+    const stripeFeePercent = watch('stripeFeePercent') || 2.9;
+    const stripeFeeFixed = watch('stripeFeeFixed') || 0.30;
 
     const calc = {
         stripe: (testAmount * (stripeFeePercent / 100)) + stripeFeeFixed,
@@ -70,6 +72,8 @@ export default function FinancialSettingsPage() {
                         ...data,
                         platformFeePercent: (data.platformFeePercent || 0.15) * 100,
                         insuranceFeePercent: (data.insuranceFeePercent || 0.02) * 100,
+                        stripeFeePercent: (data.stripeFeePercent || 0.029) * 100,
+                        stripeFeeFixed: data.stripeFeeFixed || 0.30,
                         weeklyDiscount: (data.weeklyDiscount || 0.15) * 100,
                         biweeklyDiscount: (data.biweeklyDiscount || 0.10) * 100,
                         monthlyDiscount: (data.monthlyDiscount || 0.05) * 100,

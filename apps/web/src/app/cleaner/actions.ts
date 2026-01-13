@@ -126,9 +126,9 @@ export async function acceptJob(id: string) {
             });
             emailData.to = customer.email;
 
-            await sendEmailNotification(customer.id, emailData, { 
-                bookingId, 
-                type: 'CLEANER_ASSIGNED' 
+            await sendEmailNotification(customer.id, emailData, {
+                bookingId,
+                type: 'CLEANER_ASSIGNED'
             });
 
             // Send SMS if phone available
@@ -137,9 +137,9 @@ export async function acceptJob(id: string) {
                     customer.firstName || 'Customer',
                     cleanerName
                 );
-                await sendSMSNotification(customer.id, customer.phone, smsMessage, { 
-                    bookingId, 
-                    type: 'CLEANER_ASSIGNED' 
+                await sendSMSNotification(customer.id, customer.phone, smsMessage, {
+                    bookingId,
+                    type: 'CLEANER_ASSIGNED'
                 });
             }
         }
@@ -230,4 +230,59 @@ export async function completeJob(bookingId: string) {
 export async function updateAvailability(_formData: FormData) {
     // Implement availability update logic here
     // Parsing formData for monday_start, monday_end, etc.
+}
+
+export async function cancelJobByAssignmentId(id: string) {
+    const session = await auth();
+    if (!session?.user?.id || session.user.role !== UserRole.CLEANER) {
+        throw new Error("Unauthorized");
+    }
+
+    const cleaner = await prisma.cleanerProfile.findUnique({
+        where: { userId: session.user.id }
+    });
+
+    if (!cleaner) throw new Error("Cleaner profile not found");
+
+    // Find the assignment
+    const assignment = await prisma.cleanerAssignment.findUnique({
+        where: { id },
+        include: { booking: { include: { user: true } } }
+    });
+
+    if (!assignment) throw new Error("Assignment not found");
+    if (assignment.cleanerId !== cleaner.id) throw new Error("Not your assignment");
+
+    // Can only cancel if still ACCEPTED
+    if (assignment.status !== AssignmentStatus.ACCEPTED) {
+        throw new Error("Cannot cancel this job");
+    }
+
+    // Update assignment to REJECTED
+    await prisma.cleanerAssignment.update({
+        where: { id },
+        data: { status: AssignmentStatus.REJECTED }
+    });
+
+    // Update booking status back to PENDING
+    await prisma.booking.update({
+        where: { id: assignment.bookingId },
+        data: { status: BookingStatus.PENDING }
+    });
+
+    // Notify customer
+    if (assignment.booking.user.email) {
+        await sendEmailNotification(
+            assignment.booking.user.id,
+            {
+                to: assignment.booking.user.email,
+                subject: 'Job Cancelled by Cleaner',
+                html: `<p>The cleaner has cancelled your booking. We'll find another cleaner for you.</p>`
+            }
+        );
+    }
+
+    revalidatePath('/cleaner/jobs');
+    revalidatePath('/cleaner/dashboard');
+    redirect('/cleaner/dashboard');
 }

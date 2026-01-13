@@ -3,8 +3,8 @@ import { prisma } from "@fixelo/database";
 import { BookingStatus, AssignmentStatus } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
-import { 
-    MapPin, Clock, Calendar, ChevronRight, Briefcase, 
+import {
+    MapPin, Clock, Calendar, ChevronRight, Briefcase,
     AlertCircle, Sparkles, CheckCircle, Home, Timer
 } from "lucide-react";
 
@@ -29,7 +29,11 @@ export default async function JobsPage() {
         );
     }
 
-    const PROVIDER_SHARE = 0.83;
+    // Get financial settings dynamically
+    const financialSettings = await prisma.financialSettings.findFirst();
+    const platformFeePercent = financialSettings?.platformFeePercent ?? 0.15;
+    const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+    const PROVIDER_SHARE = 1 - platformFeePercent - insuranceFeePercent;
 
     // Available Jobs (Pending assignments)
     const pendingAssignments = await prisma.cleanerAssignment.findMany({
@@ -169,7 +173,7 @@ export default async function JobsPage() {
                                             <p className="text-xs text-gray-400">Est. earnings</p>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                                         <div className="flex items-center text-sm text-gray-600">
                                             <MapPin className="w-4 h-4 mr-1 text-gray-400" />
@@ -180,7 +184,7 @@ export default async function JobsPage() {
                                             {assignment.booking.bedrooms}BR / {assignment.booking.bathrooms}BA
                                         </div>
                                     </div>
-                                    
+
                                     <div className="mt-3 bg-green-50 text-green-700 py-2 px-4 rounded-xl text-center font-medium text-sm">
                                         View Details & Accept
                                         <ChevronRight className="w-4 h-4 inline ml-1" />
@@ -218,7 +222,7 @@ export default async function JobsPage() {
                             const jobDate = new Date(assignment.booking.scheduledDate);
                             const dateLabel = getDateLabel(jobDate);
                             const isJobToday = isToday(jobDate);
-                            
+
                             return (
                                 <Link key={assignment.id} href={`/cleaner/jobs/${assignment.id}`}>
                                     <div className={`bg-white rounded-2xl p-4 border border-gray-100 hover:shadow-md transition-all ${isJobToday ? 'ring-2 ring-green-500 ring-offset-2' : ''}`}>

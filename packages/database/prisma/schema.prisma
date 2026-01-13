@@ -690,34 +690,6 @@ model SystemConfig {
 // ============================================
 
 model FinancialSettings {
-  id                    String   @id @default(uuid())
-  
-  // Fees
-  platformFeePercent    Float    @default(0.15)
-  stripeFeePercent      Float    @default(0.029)
-  stripeFeeFixed        Float    @default(0.30)
-  insuranceFeePercent   Float    @default(0.02)
-  
-  // Minimum Booking
-  minBookingAmount      Float    @default(60)      // Minimum booking value
-  
-  // Recurring Discounts
-  weeklyDiscount        Float    @default(0.15)    // 15% off for weekly
-  biweeklyDiscount      Float    @default(0.10)    // 10% off for bi-weekly
-  monthlyDiscount       Float    @default(0.05)    // 5% off for monthly
-  
-  // Cancellation Policy
-  freeCancelHours       Int      @default(24)      // Free cancellation up to X hours before
-  lateCancelFeePercent  Float    @default(0.50)    // 50% fee for late cancellation
-  cleanerStrikePenalty  Float    @default(25)      // $25 penalty for cleaner late cancel
-  maxStrikes            Int      @default(3)       // Max strikes before suspension
-  
-  // Quality Guarantee
-  autoRefundThreshold   Int      @default(2)       // Auto refund if rating <= X
-  recleanWindowHours    Int      @default(48)      // Hours to request re-clean
-  
-  // Payouts
-  autoPayoutEnabled     Boolean  @default(true)
   payoutSchedule        String   @default("WEEKLY")
   payoutDay             String   @default("FRIDAY")
   minPayoutAmount       Float    @default(50)

@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { 
-    Bell, Loader2, CheckCheck, Briefcase, DollarSign, 
+import {
+    Bell, Loader2, CheckCheck, Briefcase, DollarSign,
     Calendar, AlertCircle, Star, MessageSquare, Trash2,
     ChevronRight
 } from 'lucide-react';
@@ -65,7 +65,7 @@ export default function NotificationsPage() {
     const markAsRead = async (id: string) => {
         try {
             await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
-            setNotifications(prev => 
+            setNotifications(prev =>
                 prev.map(n => n.id === id ? { ...n, read: true } : n)
             );
         } catch {
@@ -124,7 +124,7 @@ export default function NotificationsPage() {
                         {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
                     </p>
                     {unreadCount > 0 && (
-                        <button 
+                        <button
                             onClick={markAllAsRead}
                             className="flex items-center gap-1 text-sm text-green-600 font-medium"
                         >
@@ -154,12 +154,11 @@ export default function NotificationsPage() {
                         const link = getNotificationLink(notification);
 
                         const Content = (
-                            <div 
-                                className={`bg-white rounded-xl p-4 border transition-all ${
-                                    notification.read 
-                                        ? 'border-gray-100' 
+                            <div
+                                className={`bg-white rounded-xl p-4 border transition-all ${notification.read
+                                        ? 'border-gray-100'
                                         : 'border-green-200 bg-green-50/50 shadow-sm'
-                                }`}
+                                    }`}
                                 onClick={() => !notification.read && markAsRead(notification.id)}
                             >
                                 <div className="flex items-start gap-3">
@@ -185,7 +184,7 @@ export default function NotificationsPage() {
                                                 {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                                             </p>
                                             <div className="flex items-center gap-2">
-                                                <button 
+                                                <button
                                                     onClick={(e) => {
                                                         e.preventDefault();
                                                         e.stopPropagation();
@@ -227,7 +226,21 @@ export default function NotificationsPage() {
                         <p className="text-sm text-blue-700 mt-1">
                             Never miss a job opportunity! Enable notifications to get instant alerts for new jobs.
                         </p>
-                        <button className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                        <button
+                            onClick={async () => {
+                                if ('Notification' in window) {
+                                    const permission = await Notification.requestPermission();
+                                    if (permission === 'granted') {
+                                        toast.success('Notifications enabled!');
+                                    } else {
+                                        toast.error('Permission denied');
+                                    }
+                                } else {
+                                    toast.error('Notifications not supported');
+                                }
+                            }}
+                            className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700"
+                        >
                             Enable Notifications
                         </button>
                     </div>

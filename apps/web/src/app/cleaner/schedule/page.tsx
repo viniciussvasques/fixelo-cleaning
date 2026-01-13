@@ -3,7 +3,7 @@ import { prisma } from "@fixelo/database";
 import { BookingStatus, AssignmentStatus } from "@prisma/client";
 import { formatCurrency } from "@/lib/utils";
 import Link from "next/link";
-import { 
+import {
     MapPin, Clock, Calendar, ChevronRight, Navigation, Phone,
     CheckCircle, AlertCircle, Home
 } from "lucide-react";
@@ -18,7 +18,11 @@ export default async function SchedulePage() {
 
     if (!cleaner) return null;
 
-    const PROVIDER_SHARE = 0.83;
+    // Get financial settings dynamically
+    const financialSettings = await prisma.financialSettings.findFirst();
+    const platformFeePercent = financialSettings?.platformFeePercent ?? 0.15;
+    const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+    const PROVIDER_SHARE = 1 - platformFeePercent - insuranceFeePercent;
 
     // Get all scheduled jobs
     const scheduledJobs = await prisma.cleanerAssignment.findMany({
@@ -117,7 +121,7 @@ export default async function SchedulePage() {
                         .map(([dateStr, jobs]) => {
                             const isToday = dateStr === today;
                             const upcomingOnly = jobs.filter(j => j.booking.status !== BookingStatus.COMPLETED);
-                            
+
                             return (
                                 <div key={dateStr}>
                                     {/* Date Header */}
@@ -186,7 +190,7 @@ export default async function SchedulePage() {
                                                     {/* Actions */}
                                                     <div className="flex gap-2">
                                                         {assignment.booking.address && (
-                                                            <a 
+                                                            <a
                                                                 href={`https://maps.google.com/?q=${encodeURIComponent(`${assignment.booking.address.street}, ${assignment.booking.address.city}, ${assignment.booking.address.state}`)}`}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
@@ -197,14 +201,14 @@ export default async function SchedulePage() {
                                                             </a>
                                                         )}
                                                         {assignment.booking.user.phone && (
-                                                            <a 
+                                                            <a
                                                                 href={`tel:${assignment.booking.user.phone}`}
                                                                 className="flex items-center justify-center gap-2 bg-gray-100 text-gray-700 py-2.5 px-4 rounded-xl font-medium text-sm"
                                                             >
                                                                 <Phone className="w-4 h-4" />
                                                             </a>
                                                         )}
-                                                        <Link 
+                                                        <Link
                                                             href={`/cleaner/jobs/${assignment.id}`}
                                                             className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-xl font-medium text-sm"
                                                         >

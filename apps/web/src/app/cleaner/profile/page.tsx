@@ -38,7 +38,9 @@ export default async function CleanerProfilePage() {
                     <div className="card p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-xl font-bold">Professional Information</h2>
-                            <button className="btn btn-outline btn-sm">Edit</button>
+                            <Link href="/cleaner/profile/edit" className="btn btn-outline btn-sm">
+                                Edit
+                            </Link>
                         </div>
 
                         <div className="space-y-4">
