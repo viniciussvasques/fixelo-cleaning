@@ -298,64 +298,64 @@ export default function JobExecutionPage() {
                 </div>
             )}
 
-            {/* Quick Actions Bar */}
-            <div className="flex gap-2 overflow-x-auto pb-2">
+            {/* Quick Actions Bar - Mobile Optimized */}
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide">
                 {customer.phone && (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="shrink-0" asChild>
                         <a href={`tel:${customer.phone}`}>
-                            <Phone className="w-4 h-4 mr-1" />
-                            Call
+                            <Phone className="w-4 h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Call</span>
                         </a>
                     </Button>
                 )}
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" className="shrink-0" asChild>
                     <Link href={`/cleaner/jobs/${bookingId}/chat`}>
-                        <MessageCircle className="w-4 h-4 mr-1" />
-                        Chat
+                        <MessageCircle className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Chat</span>
                     </Link>
                 </Button>
                 {address && (
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" className="shrink-0" asChild>
                         <a 
                             href={`https://maps.google.com/?q=${encodeURIComponent(`${address.street}, ${address.city}, ${address.state} ${address.zip}`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <Navigation className="w-4 h-4 mr-1" />
-                            Navigate
+                            <Navigation className="w-4 h-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Navigate</span>
                         </a>
                     </Button>
                 )}
-                <Button variant="outline" size="sm" onClick={() => setShowNoteModal(true)}>
-                    <StickyNote className="w-4 h-4 mr-1" />
-                    Note
+                <Button variant="outline" size="sm" className="shrink-0" onClick={() => setShowNoteModal(true)}>
+                    <StickyNote className="w-4 h-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Note</span>
                 </Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="outline" size="sm" className="shrink-0" asChild>
                     <Link href={`/cleaner/jobs/${bookingId}/support`}>
-                        <HelpCircle className="w-4 h-4 mr-1" />
-                        Support
+                        <HelpCircle className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Support</span>
                     </Link>
                 </Button>
             </div>
 
-            {/* Tabs */}
+            {/* Tabs - Mobile Optimized */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-4">
-                    <TabsTrigger value="overview">
-                        <Home className="w-4 h-4 mr-1 hidden sm:inline" />
-                        Overview
+                <TabsList className="grid w-full grid-cols-4 h-auto p-1">
+                    <TabsTrigger value="overview" className="text-xs sm:text-sm py-2">
+                        <Home className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Overview</span>
                     </TabsTrigger>
-                    <TabsTrigger value="checklist">
-                        <List className="w-4 h-4 mr-1 hidden sm:inline" />
-                        Checklist
+                    <TabsTrigger value="checklist" className="text-xs sm:text-sm py-2">
+                        <List className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Checklist</span>
                     </TabsTrigger>
-                    <TabsTrigger value="before">
-                        <ImageIcon className="w-4 h-4 mr-1 hidden sm:inline" />
-                        Before
+                    <TabsTrigger value="before" className="text-xs sm:text-sm py-2">
+                        <ImageIcon className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">Before</span>
                     </TabsTrigger>
-                    <TabsTrigger value="after">
-                        <ImageIcon className="w-4 h-4 mr-1 hidden sm:inline" />
-                        After
+                    <TabsTrigger value="after" className="text-xs sm:text-sm py-2">
+                        <ImageIcon className="w-4 h-4 sm:mr-1" />
+                        <span className="hidden sm:inline">After</span>
                     </TabsTrigger>
                 </TabsList>
 
@@ -518,8 +518,8 @@ export default function JobExecutionPage() {
                 </TabsContent>
             </Tabs>
 
-            {/* Fixed Action Button */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t p-4 safe-area-bottom lg:left-64">
+            {/* Fixed Action Button - Mobile Optimized */}
+            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 safe-area-bottom z-40 lg:left-64 lg:shadow-none">
                 <div className="max-w-2xl mx-auto">
                     {status === 'NOT_STARTED' && (
                         <Button 
