@@ -14,8 +14,8 @@ COPY turbo.json ./
 COPY apps/web/package*.json ./apps/web/
 COPY packages/database/package*.json ./packages/database/
 
-# Install dependencies
-RUN npm ci --only=production=false
+# Install dependencies (include dev dependencies for build)
+RUN npm install
 
 # Stage 2: Builder
 FROM node:20-alpine AS builder

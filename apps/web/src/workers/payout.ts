@@ -1,6 +1,6 @@
 import cron from 'node-cron';
 import { prisma } from '@fixelo/database';
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 import { CleanerProfile } from '@prisma/client';
 
 interface CleanerPayoutData {
@@ -22,19 +22,35 @@ cron.schedule(PAYOUT_CRON_SCHEDULE, async () => {
 
 async function processWeeklyPayouts() {
     try {
+        // Get Stripe client dynamically
+        const stripe = await getStripeClient();
+        
         // 0. Load Financial Settings from DB
         const settings = await prisma.financialSettings.findFirst();
         const platformFeePercent = settings?.platformFeePercent ?? 0.15;
         const insuranceFeePercent = settings?.insuranceFeePercent ?? 0.02;
+        const stripeFeePercent = settings?.stripeFeePercent ?? 0.029;
+        const stripeFeeFixed = settings?.stripeFeeFixed ?? 0.30;
         const minPayoutAmount = settings?.minPayoutAmount ?? 50;
+        const holdDaysAfterService = settings?.holdDaysAfterService ?? 2;
 
-        console.log(`[Payout] Using settings: Platform ${platformFeePercent * 100}%, Insurance ${insuranceFeePercent * 100}%, Min $${minPayoutAmount}`);
+        console.log(`[Payout] Using settings: Platform ${platformFeePercent * 100}%, Insurance ${insuranceFeePercent * 100}%, Hold ${holdDaysAfterService} days, Min $${minPayoutAmount}`);
 
-        // 1. Fetch completed bookings pending payout
+        // Calculate cutoff date (only pay bookings completed > holdDays ago)
+        const holdCutoffDate = new Date();
+        holdCutoffDate.setDate(holdCutoffDate.getDate() - holdDaysAfterService);
+        console.log(`[Payout] Only processing bookings completed before ${holdCutoffDate.toISOString()}`);
+
+        // 1. Fetch completed bookings pending payout that are past hold period
         const bookings = await prisma.booking.findMany({
             where: {
                 status: 'COMPLETED',
                 payoutStatus: 'PENDING',
+                // Only include bookings completed before the hold cutoff
+                updatedAt: { lt: holdCutoffDate },
+                // Exclude bookings with pending quality issues
+                recleanRequested: false,
+                qualityIssueRefunded: false,
             },
             include: {
                 assignments: {
@@ -45,11 +61,11 @@ async function processWeeklyPayouts() {
         });
 
         if (bookings.length === 0) {
-            console.log('No eligible bookings found for payout.');
+            console.log('No eligible bookings found for payout (considering hold period).');
             return;
         }
 
-        console.log(`Found ${bookings.length} eligible bookings.`);
+        console.log(`Found ${bookings.length} eligible bookings (past ${holdDaysAfterService}-day hold).`);
 
         // 2. Group by Cleaner
         const payoutsByCleaner = new Map<string, CleanerPayoutData>();
@@ -72,12 +88,21 @@ async function processWeeklyPayouts() {
                 bookings: []
             };
 
-            // Calculate Net Amount using DB settings
-            const netAmount = booking.totalPrice * (1 - (platformFeePercent + insuranceFeePercent));
+            // Calculate Net Amount: Total - Stripe Fee, then deduct platform + insurance
+            const stripeFee = (booking.totalPrice * stripeFeePercent) + stripeFeeFixed;
+            const afterStripe = booking.totalPrice - stripeFee;
+            const netAmount = afterStripe * (1 - platformFeePercent - insuranceFeePercent);
 
-            current.amount += netAmount;
+            // Add tips (100% goes to cleaner)
+            const tipAmount = (booking as any).tipAmount || 0;
+
+            current.amount += netAmount + tipAmount;
             current.bookings.push(booking.id);
             payoutsByCleaner.set(cleanerId, current);
+
+            if (tipAmount > 0) {
+                console.log(`[Payout] Booking ${booking.id}: Service $${netAmount.toFixed(2)} + Tip $${tipAmount.toFixed(2)}`);
+            }
         }
 
         // 3. Process Transfers

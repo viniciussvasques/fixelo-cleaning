@@ -1,47 +1,49 @@
+/**
+ * Booking Cancellation API
+ * 
+ * Handles cancellation with penalties:
+ * - Customer: Free if >24h before, 50% fee if <24h
+ * - Cleaner: Strike + $25 penalty if <2h before
+ */
+
 import { NextResponse } from 'next/server';
+import { prisma } from '@fixelo/database';
 import { auth } from '@/lib/auth';
-import { prisma, BookingStatus } from '@fixelo/database';
-import { z } from 'zod';
-import { sendEmailNotification } from '@/lib/email';
-import { sendSMSNotification } from '@/lib/sms';
 import { getStripeClient } from '@/lib/stripe';
+import { z } from 'zod';
+import { sendSMSNotification } from '@/lib/sms';
+import { sendEmailNotification } from '@/lib/email';
+import { UserRole, BookingStatus, CleanerStatus } from '@prisma/client';
 
 const cancelSchema = z.object({
-    reason: z.string().min(10, 'Please provide a reason (minimum 10 characters)'),
+    reason: z.string().min(10).max(500),
 });
 
 export async function POST(
-    request: Request,
+    req: Request,
     { params }: { params: { id: string } }
 ) {
     try {
         const session = await auth();
-
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await request.json();
+        const body = await req.json();
         const { reason } = cancelSchema.parse(body);
 
-        // Get booking with assignments and payment info
-        const booking = await prisma.booking.findFirst({
-            where: {
-                id: params.id,
-                userId: session.user.id
-            },
+        // Get booking with all relations
+        const booking = await prisma.booking.findUnique({
+            where: { id: params.id },
             include: {
                 user: true,
+                payment: true,
                 assignments: {
+                    where: { status: 'ACCEPTED' },
                     include: {
-                        cleaner: {
-                            include: {
-                                user: true
-                            }
-                        }
+                        cleaner: { include: { user: true } }
                     }
-                },
-                payment: true
+                }
             }
         });
 
@@ -49,149 +51,217 @@ export async function POST(
             return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
         }
 
-        // Check if can cancel
-        if (booking.status === BookingStatus.COMPLETED) {
-            return NextResponse.json(
-                { error: 'Cannot cancel completed booking' },
-                { status: 400 }
-            );
+        // Verify user can cancel (owner, assigned cleaner, or admin)
+        const isCustomer = booking.userId === session.user.id;
+        const assignedCleaner = booking.assignments[0]?.cleaner;
+        const isCleaner = assignedCleaner?.userId === session.user.id;
+        const isAdmin = session.user.role === UserRole.ADMIN;
+
+        if (!isCustomer && !isCleaner && !isAdmin) {
+            return NextResponse.json({ error: 'Unauthorized to cancel this booking' }, { status: 403 });
         }
 
-        if (booking.status === BookingStatus.CANCELLED) {
-            return NextResponse.json(
-                { error: 'Booking already cancelled' },
-                { status: 400 }
-            );
+        // Check if booking can be cancelled
+        const nonCancellableStatuses: BookingStatus[] = ['COMPLETED', 'CANCELLED', 'REFUNDED'];
+        if (nonCancellableStatuses.includes(booking.status)) {
+            return NextResponse.json({ error: 'This booking cannot be cancelled' }, { status: 400 });
         }
 
-        // Cancel booking
-        const updatedBooking = await prisma.booking.update({
-            where: { id: params.id },
+        // Get financial settings
+        const settings = await prisma.financialSettings.findFirst();
+        const freeCancelHours = settings?.freeCancelHours ?? 24;
+        const lateCancelFeePercent = settings?.lateCancelFeePercent ?? 0.50;
+        const cleanerStrikePenalty = settings?.cleanerStrikePenalty ?? 25;
+        const maxStrikes = settings?.maxStrikes ?? 3;
+
+        // Calculate hours until service
+        const hoursUntilService = (new Date(booking.scheduledDate).getTime() - Date.now()) / (1000 * 60 * 60);
+
+        let cancellationFee = 0;
+        let refundAmount = booking.totalPrice;
+        let cleanerPenalty = 0;
+        let addStrike = false;
+
+        // Determine cancellation fees based on who is cancelling
+        if (isCleaner) {
+            // Cleaner cancellation logic
+            if (hoursUntilService < 2) {
+                // Very late cancellation - strike + penalty
+                addStrike = true;
+                cleanerPenalty = cleanerStrikePenalty;
+                console.log(`[Cancel] Cleaner late cancellation (<2h). Adding strike and $${cleanerPenalty} penalty.`);
+            } else if (hoursUntilService < 24) {
+                // Late but not critical - just strike
+                addStrike = true;
+                console.log(`[Cancel] Cleaner cancellation <24h. Adding strike.`);
+            }
+            // Customer gets full refund when cleaner cancels
+            refundAmount = booking.totalPrice;
+        } else if (isCustomer) {
+            // Customer cancellation logic
+            if (hoursUntilService < freeCancelHours) {
+                // Late cancellation - apply fee
+                cancellationFee = booking.totalPrice * lateCancelFeePercent;
+                refundAmount = booking.totalPrice - cancellationFee;
+                console.log(`[Cancel] Customer late cancellation. Fee: $${cancellationFee.toFixed(2)}`);
+            }
+        }
+        // Admin can cancel without fees
+
+        // Process refund via Stripe
+        const stripe = await getStripeClient();
+        let refundId = null;
+
+        if (booking.payment?.stripePaymentIntentId && refundAmount > 0) {
+            try {
+                const refund = await stripe.refunds.create({
+                    payment_intent: booking.payment.stripePaymentIntentId,
+                    amount: Math.round(refundAmount * 100), // cents
+                    reason: 'requested_by_customer',
+                    metadata: {
+                        bookingId: booking.id,
+                        cancelledBy: isCleaner ? 'cleaner' : (isCustomer ? 'customer' : 'admin'),
+                        cancellationFee: cancellationFee.toString()
+                    }
+                });
+                refundId = refund.id;
+            } catch (err) {
+                console.error('[Cancel] Refund failed:', err);
+                // Continue with cancellation even if refund fails
+            }
+        }
+
+        // Update booking
+        await prisma.booking.update({
+            where: { id: booking.id },
             data: {
-                status: BookingStatus.CANCELLED,
+                status: 'CANCELLED',
                 cancelledAt: new Date(),
                 cancelledBy: session.user.id,
-                cancellationReason: reason
+                cancellationReason: reason,
+                cancellationFee: cancellationFee
             }
         });
 
-        // Notify assigned cleaner if any
-        const activeAssignment = booking.assignments.find(
-            a => a.status === 'ACCEPTED' || a.status === 'PENDING'
-        );
-
-        if (activeAssignment?.cleaner) {
-            const cleanerUser = activeAssignment.cleaner.user;
-
-            // Send email notification to cleaner
-            await sendEmailNotification(cleanerUser.id, {
-                to: cleanerUser.email,
-                subject: 'Booking Cancellation Notice - Fixelo',
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h1 style="color: #dc2626;">Booking Cancelled</h1>
-                        <p>Hi ${cleanerUser.firstName},</p>
-                        <p>Unfortunately, a booking has been cancelled by the customer.</p>
-                        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                            <tr>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Date:</strong></td>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;">
-                                    ${new Date(booking.scheduledDate).toLocaleDateString()}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Address:</strong></td>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${(booking.addressSnapshot as { street?: string })?.street || 'N/A'}</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;"><strong>Reason:</strong></td>
-                                <td style="padding: 10px; border-bottom: 1px solid #eee;">${reason}</td>
-                            </tr>
-                        </table>
-                        <p>This time slot is now available for other bookings. Check your dashboard for new job offers!</p>
-                        <p>Best regards,<br/>The Fixelo Team</p>
-                    </div>
-                `,
+        // Update payment record
+        if (booking.payment && refundId) {
+            await prisma.payment.update({
+                where: { id: booking.payment.id },
+                data: {
+                    status: cancellationFee > 0 ? 'PARTIALLY_REFUNDED' : 'REFUNDED',
+                    refundedAmount: refundAmount,
+                    refundedAt: new Date(),
+                    stripeRefundId: refundId
+                }
             });
+        }
 
-            // Send SMS notification if phone available
-            if (cleanerUser.phone) {
-                await sendSMSNotification(
-                    cleanerUser.id,
-                    cleanerUser.phone,
-                    `Fixelo: A booking for ${new Date(booking.scheduledDate).toLocaleDateString()} has been cancelled. Check your dashboard for new jobs.`
-                );
+        // Handle cleaner penalties
+        if (assignedCleaner && (addStrike || cleanerPenalty > 0)) {
+            const currentStrikes = assignedCleaner.strikes || 0;
+            const newStrikes = addStrike ? currentStrikes + 1 : currentStrikes;
+
+            // Parse existing strike reasons
+            let strikeReasons: string[] = [];
+            try {
+                strikeReasons = JSON.parse(assignedCleaner.strikeReasons || '[]');
+            } catch { /* empty */ }
+            
+            if (addStrike) {
+                strikeReasons.push(`${new Date().toISOString()}: Cancelled booking ${booking.id} with ${hoursUntilService.toFixed(1)}h notice`);
             }
 
-            // Update assignment status
-            await prisma.cleanerAssignment.update({
-                where: { id: activeAssignment.id },
+            // Check if cleaner should be suspended
+            const shouldSuspend = newStrikes >= maxStrikes;
+
+            await prisma.cleanerProfile.update({
+                where: { id: assignedCleaner.id },
+                data: {
+                    strikes: newStrikes,
+                    lastStrikeAt: addStrike ? new Date() : undefined,
+                    strikeReasons: JSON.stringify(strikeReasons),
+                    jobsCancelled: { increment: 1 },
+                    cancellationsLast30: { increment: 1 },
+                    status: shouldSuspend ? CleanerStatus.SUSPENDED : undefined
+                }
+            });
+
+            // Notify cleaner about strike
+            if (addStrike) {
+                const cleanerUser = assignedCleaner.user;
+                const warningMsg = shouldSuspend
+                    ? `⚠️ Your account has been suspended due to ${newStrikes} cancellations. Please contact support.`
+                    : `⚠️ You received a strike for late cancellation (${newStrikes}/${maxStrikes}). Please try to give more notice.`;
+
+                if (cleanerUser.phone) {
+                    await sendSMSNotification(cleanerUser.id, cleanerUser.phone, warningMsg, { type: 'STRIKE' });
+                }
+                await sendEmailNotification(cleanerUser.id, {
+                    to: cleanerUser.email,
+                    subject: shouldSuspend ? 'Account Suspended' : 'Cancellation Strike Warning',
+                    html: `<p>${warningMsg}</p>`
+                }, { type: 'STRIKE' });
+            }
+        }
+
+        // Update cleaner assignment status
+        if (booking.assignments.length > 0) {
+            await prisma.cleanerAssignment.updateMany({
+                where: { bookingId: booking.id },
                 data: { status: 'CANCELLED' }
             });
         }
 
-        // Process refund if paid
-        if (booking.payment?.stripePaymentIntentId && booking.payment.status === 'SUCCEEDED') {
-            try {
-                // Create refund via Stripe
-                const stripeClient = await getStripeClient();
-                const refund = await stripeClient.refunds.create({
-                    payment_intent: booking.payment.stripePaymentIntentId,
-                    reason: 'requested_by_customer',
-                });
+        // Notify parties
+        // Notify customer if cleaner cancelled
+        if (isCleaner) {
+            const customerUser = booking.user;
+            if (customerUser.phone) {
+                await sendSMSNotification(
+                    customerUser.id,
+                    customerUser.phone,
+                    `Your Fixelo booking for ${new Date(booking.scheduledDate).toLocaleDateString()} has been cancelled by the cleaner. Full refund is being processed. We apologize for the inconvenience.`,
+                    { bookingId: booking.id, type: 'BOOKING_CANCELLED' }
+                );
+            }
+            await sendEmailNotification(customerUser.id, {
+                to: customerUser.email,
+                subject: 'Booking Cancelled - Full Refund Issued',
+                html: `
+                    <h2>Your Booking Has Been Cancelled</h2>
+                    <p>Unfortunately, the cleaner had to cancel your booking scheduled for ${new Date(booking.scheduledDate).toLocaleDateString()}.</p>
+                    <p>A full refund of <strong>$${refundAmount.toFixed(2)}</strong> is being processed and will appear in your account within 5-10 business days.</p>
+                    <p>We apologize for the inconvenience and are working to find you another cleaner.</p>
+                `
+            }, { bookingId: booking.id, type: 'BOOKING_CANCELLED' });
+        }
 
-                // Update payment record
-                await prisma.payment.update({
-                    where: { id: booking.payment.id },
-                    data: {
-                        status: 'REFUNDED',
-                        stripeRefundId: refund.id,
-                        refundedAmount: refund.amount / 100,
-                        refundedAt: new Date(),
-                    }
-                });
-
-                // Send refund confirmation to customer
-                await sendEmailNotification(booking.user.id, {
-                    to: booking.user.email,
-                    subject: 'Your Refund Has Been Processed - Fixelo',
-                    html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                            <h1 style="color: #2563eb;">Refund Processed</h1>
-                            <p>Hi ${booking.user.firstName},</p>
-                            <p>Your booking cancellation has been processed and a refund of 
-                               <strong>$${(refund.amount / 100).toFixed(2)}</strong> has been initiated.</p>
-                            <p>The refund should appear in your account within 5-10 business days, 
-                               depending on your bank or card issuer.</p>
-                            <p>We're sorry to see you go. If you'd like to book again in the future, 
-                               we'll be here!</p>
-                            <p>Best regards,<br/>The Fixelo Team</p>
-                        </div>
-                    `,
-                });
-
-            } catch (refundError) {
-                console.error('Refund processing error:', refundError);
-                // Don't fail the cancellation, but log the error
+        // Notify cleaner if customer cancelled
+        if (isCustomer && assignedCleaner) {
+            const cleanerUser = assignedCleaner.user;
+            if (cleanerUser.phone) {
+                await sendSMSNotification(
+                    cleanerUser.id,
+                    cleanerUser.phone,
+                    `A booking for ${new Date(booking.scheduledDate).toLocaleDateString()} has been cancelled by the customer.`,
+                    { bookingId: booking.id, type: 'BOOKING_CANCELLED' }
+                );
             }
         }
 
         return NextResponse.json({
-            ...updatedBooking,
-            message: 'Booking cancelled successfully'
+            success: true,
+            message: 'Booking cancelled successfully',
+            refundAmount,
+            cancellationFee,
+            refundId
         });
+
     } catch (error) {
         if (error instanceof z.ZodError) {
-            return NextResponse.json(
-                { error: 'Validation failed', details: error.errors },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Please provide a valid cancellation reason' }, { status: 400 });
         }
-
-        console.error('Booking cancellation error:', error);
-        return NextResponse.json(
-            { error: 'Failed to cancel booking' },
-            { status: 500 }
-        );
+        console.error('Cancellation error:', error);
+        return NextResponse.json({ error: 'Failed to cancel booking' }, { status: 500 });
     }
 }

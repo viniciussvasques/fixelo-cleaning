@@ -113,9 +113,4 @@ export function clearStripeCache(): void {
     stripeInstances.clear();
 }
 
-// Legacy export for backwards compatibility (uses env var directly)
-// TODO: Migrate all usages to getStripeClient()
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
-    apiVersion: '2023-10-16',
-    typescript: true,
-});
+// Legacy export removed - all usages migrated to getStripeClient()

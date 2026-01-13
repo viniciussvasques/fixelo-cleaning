@@ -127,6 +127,15 @@ model User {
   referralsSent      Referral[] @relation("Referrer")
   referralReceived   Referral?  @relation("Referred")
   sentMessages       Message[]
+  
+  // Support
+  supportTickets     SupportTicket[]
+  ticketMessages     TicketMessage[]
+  
+  // Client ratings and blacklist (received as customer)
+  clientRatings      ClientRating[]    @relation("ClientRatings")
+  blacklistedBy      CleanerBlacklist[] @relation("BlacklistedClient")
+  cleanerNotes       CleanerNote[]     @relation("ClientNotes")
 
   @@index([email])
   @@index([phone])
@@ -148,6 +157,11 @@ model CleanerProfile {
   jobsCompleted         Int            @default(0)
   jobsCancelled         Int            @default(0)
   cancellationsLast30   Int            @default(0)
+  
+  // Strikes System (for late cancellations)
+  strikes               Int            @default(0)    // Max 3 before suspension
+  lastStrikeAt          DateTime?
+  strikeReasons         String?        // JSON array of strike reasons
   
   // Provider Metrics (Uber-style)
   totalJobsOffered    Int @default(0)
@@ -221,6 +235,12 @@ model CleanerProfile {
   reviews               Review[]
   payouts               Payout[]
   references            CleanerReference[]
+  jobExecutions         JobExecution[]
+  
+  // Client management
+  clientRatings         ClientRating[]
+  blacklist             CleanerBlacklist[]
+  privateNotes          CleanerNote[]
 
   @@index([status])
   @@index([latitude, longitude])
@@ -299,7 +319,8 @@ model ServiceType {
   updatedAt   DateTime  @updatedAt
 
   // Relations
-  bookings    Booking[]
+  bookings           Booking[]
+  checklistTemplates ChecklistTemplate[]
 
   @@index([slug])
 }
@@ -360,6 +381,16 @@ model Booking {
   platformReserve        Float         // Insurance/reserve
   totalPrice             Float
   
+  // Tips (100% goes to cleaner)
+  tipAmount              Float         @default(0)
+  tipPaidAt              DateTime?
+  
+  // Recurring Booking
+  recurringId            String?
+  recurring              RecurringBooking? @relation(fields: [recurringId], references: [id])
+  discountPercent        Float         @default(0)    // Applied recurring discount
+  discountAmount         Float         @default(0)
+  
   // Payment
   stripePaymentIntentId  String?       @unique
   
@@ -367,6 +398,15 @@ model Booking {
   cancelledAt            DateTime?
   cancelledBy            String?       // userId
   cancellationReason     String?
+  cancellationFee        Float         @default(0)    // Fee charged if late cancellation
+  
+  // Quality Guarantee
+  recleanRequested       Boolean       @default(false)
+  recleanRequestedAt     DateTime?
+  recleanReason          String?
+  recleanBookingId       String?       // Link to the re-clean booking
+  qualityIssueRefunded   Boolean       @default(false)
+  refundReason           String?
   
 
   // Financial & Payouts
@@ -387,6 +427,9 @@ model Booking {
   assignments            CleanerAssignment[]
   payment                Payment?
   review                 Review?
+  jobExecution           JobExecution?
+  serviceReport          ServiceReport?
+  supportTickets         SupportTicket[] @relation("SupportTickets")
 
   @@index([userId])
   @@index([status])
@@ -556,7 +599,8 @@ model Address {
   updatedAt DateTime @updatedAt
 
   // Relations
-  bookings  Booking[]
+  bookings      Booking[]
+  cleanerNotes  CleanerNote[]
 
   @@index([userId])
   @@index([latitude, longitude])
@@ -654,6 +698,24 @@ model FinancialSettings {
   stripeFeeFixed        Float    @default(0.30)
   insuranceFeePercent   Float    @default(0.02)
   
+  // Minimum Booking
+  minBookingAmount      Float    @default(60)      // Minimum booking value
+  
+  // Recurring Discounts
+  weeklyDiscount        Float    @default(0.15)    // 15% off for weekly
+  biweeklyDiscount      Float    @default(0.10)    // 10% off for bi-weekly
+  monthlyDiscount       Float    @default(0.05)    // 5% off for monthly
+  
+  // Cancellation Policy
+  freeCancelHours       Int      @default(24)      // Free cancellation up to X hours before
+  lateCancelFeePercent  Float    @default(0.50)    // 50% fee for late cancellation
+  cleanerStrikePenalty  Float    @default(25)      // $25 penalty for cleaner late cancel
+  maxStrikes            Int      @default(3)       // Max strikes before suspension
+  
+  // Quality Guarantee
+  autoRefundThreshold   Int      @default(2)       // Auto refund if rating <= X
+  recleanWindowHours    Int      @default(48)      // Hours to request re-clean
+  
   // Payouts
   autoPayoutEnabled     Boolean  @default(true)
   payoutSchedule        String   @default("WEEKLY")
@@ -663,6 +725,53 @@ model FinancialSettings {
   requireCustomerReview Boolean  @default(true)
   
   updatedAt             DateTime @updatedAt
+}
+
+// ============================================
+// RECURRING BOOKINGS
+// ============================================
+
+enum RecurringFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model RecurringBooking {
+  id                String             @id @default(uuid())
+  userId            String
+  
+  // Service Details
+  serviceTypeId     String
+  addressId         String
+  bedrooms          Int
+  bathrooms         Int
+  hasPets           Boolean            @default(false)
+  specialInstructions String?          @db.Text
+  preferredDay      DayOfWeek
+  preferredTime     String             // '09:00-12:00'
+  
+  // Frequency & Discount
+  frequency         RecurringFrequency
+  discountPercent   Float              // Applied discount based on frequency
+  
+  // Status
+  isActive          Boolean            @default(true)
+  nextBookingDate   DateTime?
+  lastBookingDate   DateTime?
+  totalBookings     Int                @default(0)
+  
+  // Preferred Cleaner (optional)
+  preferredCleanerId String?
+  
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  
+  // Relations
+  bookings          Booking[]
+  
+  @@index([userId])
+  @@index([isActive])
 }
 
 model Payout {
@@ -717,4 +826,389 @@ model Message {
   
   @@index([bookingId])
   @@index([senderId])
+}
+
+// ============================================
+// QUALITY ISSUES & DISPUTES
+// ============================================
+
+enum QualityIssueStatus {
+  OPEN
+  RECLEAN_SCHEDULED
+  REFUNDED
+  RESOLVED
+  REJECTED
+}
+
+model QualityIssue {
+  id              String             @id @default(uuid())
+  bookingId       String
+  userId          String             // Customer who reported
+  cleanerId       String             // Cleaner involved
+  
+  // Issue Details
+  issueType       String             // 'INCOMPLETE', 'DAMAGE', 'NO_SHOW', 'POOR_QUALITY'
+  description     String             @db.Text
+  photos          String?            // JSON array of photo URLs
+  
+  // Resolution
+  status          QualityIssueStatus @default(OPEN)
+  resolution      String?            // 'RECLEAN', 'PARTIAL_REFUND', 'FULL_REFUND', 'CREDIT'
+  resolutionNotes String?            @db.Text
+  
+  // Financial
+  refundAmount    Float?
+  creditAmount    Float?
+  recleanBookingId String?           // If re-clean was scheduled
+  
+  // Admin
+  assignedTo      String?            // Admin userId handling
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  @@index([bookingId])
+  @@index([userId])
+  @@index([cleanerId])
+  @@index([status])
+}
+
+// ============================================
+// JOB EXECUTION (Check-in/Check-out Flow)
+// ============================================
+
+enum JobExecutionStatus {
+  NOT_STARTED
+  CHECKED_IN
+  IN_PROGRESS
+  COMPLETED
+}
+
+model JobExecution {
+  id            String             @id @default(uuid())
+  bookingId     String             @unique
+  booking       Booking            @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  cleanerId     String
+  cleaner       CleanerProfile     @relation(fields: [cleanerId], references: [id])
+  
+  status        JobExecutionStatus @default(NOT_STARTED)
+  
+  // Check-in/out times
+  checkedInAt   DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  
+  // Location verification
+  checkinLat    Float?
+  checkinLng    Float?
+  checkoutLat   Float?
+  checkoutLng   Float?
+  
+  // Notes
+  notes         String?            @db.Text
+  
+  // Checklist completion
+  checklistCompletedAt DateTime?
+  
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  
+  // Relations
+  photos        JobPhoto[]
+  checklist     JobChecklistItem[]
+  
+  @@index([bookingId])
+  @@index([cleanerId])
+  @@index([status])
+}
+
+enum JobPhotoType {
+  BEFORE
+  AFTER
+}
+
+model JobPhoto {
+  id              String        @id @default(uuid())
+  jobExecutionId  String
+  jobExecution    JobExecution  @relation(fields: [jobExecutionId], references: [id], onDelete: Cascade)
+  
+  type            JobPhotoType  // BEFORE or AFTER
+  url             String        // S3 URL
+  s3Key           String        // S3 key for deletion
+  
+  room            String?       // e.g., "Kitchen", "Bathroom", "Living Room"
+  caption         String?
+  
+  createdAt       DateTime      @default(now())
+  
+  @@index([jobExecutionId])
+  @@index([type])
+}
+
+model JobChecklistItem {
+  id              String        @id @default(uuid())
+  jobExecutionId  String
+  jobExecution    JobExecution  @relation(fields: [jobExecutionId], references: [id], onDelete: Cascade)
+  
+  category        String        // e.g., "Kitchen", "Bathroom", "General"
+  task            String        // e.g., "Clean countertops", "Mop floor"
+  isRequired      Boolean       @default(true)
+  
+  completed       Boolean       @default(false)
+  completedAt     DateTime?
+  notes           String?
+  
+  sortOrder       Int           @default(0)
+  
+  createdAt       DateTime      @default(now())
+  
+  @@index([jobExecutionId])
+  @@index([category])
+}
+
+// Default checklist templates per service type
+model ChecklistTemplate {
+  id            String                   @id @default(uuid())
+  serviceTypeId String?
+  serviceType   ServiceType?             @relation(fields: [serviceTypeId], references: [id])
+  
+  name          String                   // e.g., "Standard Cleaning", "Deep Cleaning"
+  isDefault     Boolean                  @default(false)
+  
+  items         ChecklistTemplateItem[]
+  
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  
+  @@index([serviceTypeId])
+}
+
+model ChecklistTemplateItem {
+  id          String            @id @default(uuid())
+  templateId  String
+  template    ChecklistTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  category    String
+  task        String
+  isRequired  Boolean           @default(true)
+  sortOrder   Int               @default(0)
+  
+  @@index([templateId])
+}
+
+// ============================================
+// SUPPORT TICKETS
+// ============================================
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  WAITING_CLEANER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  BOOKING_ISSUE
+  PAYMENT_ISSUE
+  CLEANER_COMPLAINT
+  CUSTOMER_COMPLAINT
+  SERVICE_QUALITY
+  TECHNICAL_ISSUE
+  ACCOUNT_ISSUE
+  OTHER
+}
+
+model SupportTicket {
+  id            String         @id @default(uuid())
+  ticketNumber  String         @unique  // e.g., "TKT-0001234"
+  
+  userId        String         // Who opened the ticket
+  user          User           @relation(fields: [userId], references: [id])
+  
+  // Optional associations
+  bookingId     String?
+  booking       Booking?       @relation("SupportTickets", fields: [bookingId], references: [id])
+  cleanerId     String?
+  
+  category      TicketCategory
+  subject       String
+  description   String         @db.Text
+  
+  status        TicketStatus   @default(OPEN)
+  priority      TicketPriority @default(MEDIUM)
+  
+  // Assignment
+  assignedTo    String?        // Admin userId
+  
+  // Resolution
+  resolvedAt    DateTime?
+  resolution    String?        @db.Text
+  
+  // Metadata
+  source        String         @default("app") // 'app', 'email', 'phone'
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // Relations
+  messages      TicketMessage[]
+  attachments   TicketAttachment[]
+  
+  @@index([userId])
+  @@index([bookingId])
+  @@index([status])
+  @@index([priority])
+}
+
+model TicketMessage {
+  id          String        @id @default(uuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  senderId    String
+  sender      User          @relation(fields: [senderId], references: [id])
+  
+  content     String        @db.Text
+  isInternal  Boolean       @default(false) // For admin-only notes
+  
+  createdAt   DateTime      @default(now())
+  
+  @@index([ticketId])
+  @@index([senderId])
+}
+
+model TicketAttachment {
+  id          String        @id @default(uuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  fileName    String
+  fileType    String
+  fileSize    Int
+  url         String
+  s3Key       String
+  
+  uploadedBy  String
+  
+  createdAt   DateTime      @default(now())
+  
+  @@index([ticketId])
+}
+
+// ============================================
+// CLIENT RATING (Cleaner rates Customer)
+// ============================================
+
+model ClientRating {
+  id            String         @id @default(uuid())
+  cleanerId     String
+  cleaner       CleanerProfile @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  clientId      String
+  client        User           @relation("ClientRatings", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  bookingId     String         @unique
+  
+  rating        Int            // 1-5 stars
+  categories    Json?          // { punctuality: 5, communication: 4, cleanliness: 5, respect: 5 }
+  comment       String?        @db.Text
+  isPrivate     Boolean        @default(true) // Private by default (only cleaner sees)
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  @@unique([cleanerId, bookingId])
+  @@index([cleanerId])
+  @@index([clientId])
+}
+
+// ============================================
+// CLEANER BLACKLIST
+// ============================================
+
+model CleanerBlacklist {
+  id            String         @id @default(uuid())
+  cleanerId     String
+  cleaner       CleanerProfile @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  clientId      String
+  client        User           @relation("BlacklistedClient", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  reason        String?        @db.Text
+  
+  createdAt     DateTime       @default(now())
+  
+  @@unique([cleanerId, clientId])
+  @@index([cleanerId])
+  @@index([clientId])
+}
+
+// ============================================
+// CLEANER PRIVATE NOTES
+// ============================================
+
+model CleanerNote {
+  id            String         @id @default(uuid())
+  cleanerId     String
+  cleaner       CleanerProfile @relation(fields: [cleanerId], references: [id], onDelete: Cascade)
+  
+  // Can be tied to a client OR address OR both
+  clientId      String?
+  client        User?          @relation("ClientNotes", fields: [clientId], references: [id], onDelete: Cascade)
+  
+  addressId     String?
+  address       Address?       @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  
+  title         String?
+  content       String         @db.Text
+  
+  // Tags for organization
+  tags          String?        // JSON array: ["parking", "pets", "access-code"]
+  
+  // Reminder for next visit
+  reminderText  String?
+  showOnNextJob Boolean        @default(false)
+  
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  @@index([cleanerId])
+  @@index([clientId])
+  @@index([addressId])
+}
+
+// ============================================
+// SERVICE REPORT (PDF Generation)
+// ============================================
+
+model ServiceReport {
+  id              String         @id @default(uuid())
+  bookingId       String         @unique
+  booking         Booking        @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  generatedAt     DateTime       @default(now())
+  
+  // S3 storage
+  pdfUrl          String?
+  s3Key           String?
+  
+  // Report data snapshot
+  reportData      Json           // Snapshot of checklist, photos, times, etc.
+  
+  // Sent to customer
+  emailedAt       DateTime?
+  emailedTo       String?
+  
+  @@index([bookingId])
 }

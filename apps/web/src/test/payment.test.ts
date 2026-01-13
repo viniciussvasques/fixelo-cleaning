@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../app/api/create-payment-intent/route';
 import { prisma } from '@fixelo/database';
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 import type { ServiceType, AddOn } from '@prisma/client';
 import type Stripe from 'stripe';
+
+// Mock stripe instance
+const mockStripeInstance = {
+    paymentIntents: {
+        create: vi.fn()
+    }
+};
 
 // Mocks
 vi.mock('@fixelo/database', () => ({
@@ -18,11 +25,7 @@ vi.mock('@fixelo/database', () => ({
 }));
 
 vi.mock('@/lib/stripe', () => ({
-    stripe: {
-        paymentIntents: {
-            create: vi.fn()
-        }
-    }
+    getStripeClient: vi.fn(() => Promise.resolve(mockStripeInstance))
 }));
 
 vi.mock('@/lib/auth', () => ({
@@ -46,7 +49,7 @@ describe('Create Payment Intent API', () => {
             { id: 'addon2', price: 30 }  // $30
         ] as AddOn[]);
 
-        vi.mocked(stripe.paymentIntents.create).mockResolvedValue({
+        mockStripeInstance.paymentIntents.create.mockResolvedValue({
             client_secret: 'secret_123'
         } as unknown as Stripe.Response<Stripe.PaymentIntent>);
 
@@ -69,7 +72,7 @@ describe('Create Payment Intent API', () => {
             where: { id: { in: ['addon1', 'addon2'] } }
         });
 
-        expect(stripe.paymentIntents.create).toHaveBeenCalledWith(expect.objectContaining({
+        expect(mockStripeInstance.paymentIntents.create).toHaveBeenCalledWith(expect.objectContaining({
             amount: 15000
         }));
     });

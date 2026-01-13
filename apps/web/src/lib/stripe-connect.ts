@@ -55,11 +55,17 @@ export async function createTransferToCleaner(
         // Get financial settings
         const settings = await prisma.financialSettings.findFirst();
         const platformFeePercent = settings?.platformFeePercent ?? 0.15; // Default 15%
+        const insuranceFeePercent = settings?.insuranceFeePercent ?? 0.02; // Default 2%
+        const stripeFeePercent = settings?.stripeFeePercent ?? 0.029;
+        const stripeFeeFixed = settings?.stripeFeeFixed ?? 0.30;
 
-        // Calculate amounts
+        // Calculate amounts (same formula as job offer for consistency)
         const totalAmount = booking.totalPrice;
-        const platformFee = Math.round(totalAmount * platformFeePercent * 100) / 100;
-        const cleanerPayout = Math.round((totalAmount - platformFee) * 100); // In cents
+        const stripeFee = (totalAmount * stripeFeePercent) + stripeFeeFixed;
+        const netAfterStripe = totalAmount - stripeFee;
+        const cleanerPayoutDecimal = netAfterStripe * (1 - platformFeePercent - insuranceFeePercent);
+        const cleanerPayout = Math.round(cleanerPayoutDecimal * 100); // In cents
+        const platformFee = netAfterStripe - cleanerPayoutDecimal;
 
         // Create transfer
         const stripeClient = await getStripeClient();

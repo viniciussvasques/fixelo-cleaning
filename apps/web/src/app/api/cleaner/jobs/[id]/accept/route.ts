@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { AssignmentStatus, BookingStatus } from '@prisma/client';
 import { auth } from '@/lib/auth';
+import { sendEmailNotification } from '@/lib/email';
+import { sendSMSNotification, SMS_TEMPLATES } from '@/lib/sms';
+import { cleanerAssignedEmail } from '@/lib/email-templates';
 
 export async function POST(
     req: Request,
@@ -101,6 +104,59 @@ export async function POST(
             where: { id: cleaner.id },
             data: { totalJobsAccepted: { increment: 1 } }
         });
+
+        // 10. Notify customer that cleaner has been assigned
+        try {
+            const bookingWithDetails = await prisma.booking.findUnique({
+                where: { id: assignment.bookingId },
+                include: {
+                    user: true,
+                    serviceType: true,
+                }
+            });
+
+            const cleanerWithUser = await prisma.cleanerProfile.findUnique({
+                where: { id: cleaner.id },
+                include: { user: true }
+            });
+
+            if (bookingWithDetails?.user && cleanerWithUser) {
+                const customer = bookingWithDetails.user;
+                const cleanerName = `${cleanerWithUser.user.firstName || ''} ${cleanerWithUser.user.lastName || ''}`.trim() || 'Your Cleaner';
+
+                // Send "Cleaner Assigned" email to customer
+                const emailData = cleanerAssignedEmail({
+                    customerName: customer.firstName || 'Customer',
+                    cleanerName,
+                    cleanerRating: cleanerWithUser.rating || 5.0,
+                    scheduledDate: bookingWithDetails.scheduledDate,
+                    scheduledTime: bookingWithDetails.timeWindow || 'TBD',
+                });
+                emailData.to = customer.email;
+
+                await sendEmailNotification(customer.id, emailData, { 
+                    bookingId: assignment.bookingId, 
+                    type: 'CLEANER_ASSIGNED' 
+                });
+                console.log(`✅ Cleaner assigned email sent to ${customer.email}`);
+
+                // Send SMS if phone available
+                if (customer.phone) {
+                    const smsMessage = SMS_TEMPLATES.cleanerAssigned(
+                        customer.firstName || 'Customer',
+                        cleanerName
+                    );
+                    await sendSMSNotification(customer.id, customer.phone, smsMessage, { 
+                        bookingId: assignment.bookingId, 
+                        type: 'CLEANER_ASSIGNED' 
+                    });
+                    console.log(`✅ Cleaner assigned SMS sent to ${customer.phone}`);
+                }
+            }
+        } catch (notifError) {
+            console.error('❌ Error sending cleaner assigned notification:', notifError);
+            // Don't fail the request if notification fails
+        }
 
         return NextResponse.json({
             success: true,

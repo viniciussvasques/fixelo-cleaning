@@ -224,6 +224,54 @@ async function main() {
     });
 
     console.log('✅ System config created');
+
+    // Create default checklist templates
+    const existingTemplate = await prisma.checklistTemplate.findFirst({
+        where: { isDefault: true }
+    });
+
+    if (!existingTemplate) {
+        await prisma.checklistTemplate.create({
+            data: {
+                name: 'Standard Cleaning Checklist',
+                isDefault: true,
+                items: {
+                    create: [
+                        // Kitchen
+                        { category: 'Kitchen', task: 'Wipe down countertops', isRequired: true, sortOrder: 1 },
+                        { category: 'Kitchen', task: 'Clean stovetop', isRequired: true, sortOrder: 2 },
+                        { category: 'Kitchen', task: 'Wipe exterior of appliances', isRequired: true, sortOrder: 3 },
+                        { category: 'Kitchen', task: 'Clean sink and fixtures', isRequired: true, sortOrder: 4 },
+                        { category: 'Kitchen', task: 'Sweep and mop floor', isRequired: true, sortOrder: 5 },
+                        { category: 'Kitchen', task: 'Empty trash', isRequired: true, sortOrder: 6 },
+                        // Bathroom
+                        { category: 'Bathroom', task: 'Clean toilet inside and out', isRequired: true, sortOrder: 7 },
+                        { category: 'Bathroom', task: 'Clean sink and countertop', isRequired: true, sortOrder: 8 },
+                        { category: 'Bathroom', task: 'Clean mirror', isRequired: true, sortOrder: 9 },
+                        { category: 'Bathroom', task: 'Clean shower/tub', isRequired: true, sortOrder: 10 },
+                        { category: 'Bathroom', task: 'Sweep and mop floor', isRequired: true, sortOrder: 11 },
+                        { category: 'Bathroom', task: 'Empty trash', isRequired: true, sortOrder: 12 },
+                        // Living Areas
+                        { category: 'Living Areas', task: 'Dust all surfaces', isRequired: true, sortOrder: 13 },
+                        { category: 'Living Areas', task: 'Vacuum carpets/rugs', isRequired: true, sortOrder: 14 },
+                        { category: 'Living Areas', task: 'Mop hard floors', isRequired: true, sortOrder: 15 },
+                        { category: 'Living Areas', task: 'Wipe light switches and door handles', isRequired: false, sortOrder: 16 },
+                        // Bedrooms
+                        { category: 'Bedrooms', task: 'Make beds', isRequired: true, sortOrder: 17 },
+                        { category: 'Bedrooms', task: 'Dust furniture and surfaces', isRequired: true, sortOrder: 18 },
+                        { category: 'Bedrooms', task: 'Vacuum floors', isRequired: true, sortOrder: 19 },
+                        { category: 'Bedrooms', task: 'Empty trash', isRequired: true, sortOrder: 20 },
+                        // Final
+                        { category: 'Final Check', task: 'Walk through all rooms', isRequired: true, sortOrder: 21 },
+                        { category: 'Final Check', task: 'Check lights are off', isRequired: false, sortOrder: 22 },
+                        { category: 'Final Check', task: 'Lock all doors', isRequired: true, sortOrder: 23 },
+                    ]
+                }
+            }
+        });
+        console.log('✅ Default checklist template created');
+    }
+
     console.log('✅ Admin user created (admin@fixelo.app / password123)');
     console.log('✅ Cleaner user created (cleaner@fixelo.app / password123)');
 

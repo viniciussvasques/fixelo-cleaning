@@ -8,6 +8,33 @@ const updateProfileSchema = z.object({
     phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number').optional(),
 });
 
+// GET - Fetch user profile
+export async function GET() {
+    return withAuth(async (userId) => {
+        try {
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
+                select: {
+                    id: true,
+                    email: true,
+                    firstName: true,
+                    lastName: true,
+                    phone: true,
+                    role: true,
+                }
+            });
+
+            if (!user) {
+                return handleError({ message: 'User not found', status: 404 });
+            }
+
+            return successResponse(user);
+        } catch (error) {
+            return handleError(error);
+        }
+    });
+}
+
 export async function PATCH(request: Request) {
     return withAuth(async (userId) => {
         try {

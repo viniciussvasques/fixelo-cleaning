@@ -98,6 +98,48 @@ export default async function SettingsPage() {
                 <Card className="hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center gap-2">
+                            💰 Financial Settings
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-3">Fees, payouts, discounts, and cancellation policies.</p>
+                        <a href="/admin/settings/financial" className="text-primary text-sm font-medium hover:underline">
+                            Manage Finances →
+                        </a>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            📋 Checklists
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-3">Manage cleaning checklist templates for jobs.</p>
+                        <a href="/admin/settings/checklists" className="text-primary text-sm font-medium hover:underline">
+                            Manage Checklists →
+                        </a>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
+                            ☁️ Storage (S3)
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground mb-3">Configure AWS S3 for photos and documents.</p>
+                        <a href="/admin/settings/storage" className="text-primary text-sm font-medium hover:underline">
+                            Manage Storage →
+                        </a>
+                    </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-md transition-shadow">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-lg flex items-center gap-2">
                             📧 Email Templates
                         </CardTitle>
                     </CardHeader>
@@ -112,13 +154,13 @@ export default async function SettingsPage() {
                 <Card className="hover:shadow-md transition-shadow">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-lg flex items-center gap-2">
-                            💰 Payouts
+                            🎯 Matching Algorithm
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className="text-sm text-muted-foreground mb-3">Configure cleaner payout schedules and rules.</p>
-                        <a href="/admin/settings/payouts" className="text-primary text-sm font-medium hover:underline">
-                            Manage Payouts →
+                        <p className="text-sm text-muted-foreground mb-3">Configure how jobs are matched to cleaners.</p>
+                        <a href="/admin/settings/algorithm" className="text-primary text-sm font-medium hover:underline">
+                            Manage Algorithm →
                         </a>
                     </CardContent>
                 </Card>

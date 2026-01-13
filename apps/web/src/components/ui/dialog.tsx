@@ -51,12 +51,12 @@ export function DialogTitle({ children, className = '' }: { children: React.Reac
     return <h2 className={`text-xl font-bold ${className}`}>{children}</h2>;
 }
 
-export function DialogDescription({ children }: { children: React.ReactNode }) {
-    return <p className="text-sm text-muted-foreground mt-1">{children}</p>;
+export function DialogDescription({ children, className }: { children: React.ReactNode; className?: string }) {
+    return <p className={`text-sm text-muted-foreground mt-1 ${className || ''}`}>{children}</p>;
 }
 
-export function DialogFooter({ children }: { children: React.ReactNode }) {
-    return <div className="flex justify-end gap-3 p-6 pt-4">{children}</div>;
+export function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {
+    return <div className={`flex justify-end gap-3 p-6 pt-4 ${className || ''}`}>{children}</div>;
 }
 
 export function DialogClose({ onClick }: { onClick: () => void }) {

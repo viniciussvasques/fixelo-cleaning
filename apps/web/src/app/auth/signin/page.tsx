@@ -42,7 +42,17 @@ function SignInPageContent() {
                 redirect: false,
             });
 
-            if (result?.error) {
+            console.log('[SignIn] Result:', JSON.stringify(result, null, 2));
+
+            // NextAuth v5 beta: error can be "CredentialsSignin" even on edge cases
+            if (result?.error && result?.error !== 'CredentialsSignin') {
+                setError('Invalid email or password');
+                setIsLoading(false);
+                return;
+            }
+            
+            // Check if we actually failed (status 401 or ok is false)
+            if (result?.status === 401 || result?.ok === false) {
                 setError('Invalid email or password');
                 setIsLoading(false);
                 return;

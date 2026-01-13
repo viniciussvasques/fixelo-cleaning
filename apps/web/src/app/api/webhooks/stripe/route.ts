@@ -3,6 +3,7 @@ import { prisma } from '@fixelo/database';
 import Stripe from 'stripe';
 import { findMatches } from '@/lib/matching';
 import { sendEmailNotification } from '@/lib/email';
+import { sendSMSNotification, SMS_TEMPLATES } from '@/lib/sms';
 import { bookingConfirmationEmail, newJobOfferEmail, cleanerAssignedEmail } from '@/lib/email-templates';
 import { getStripeClient, getStripeWebhookSecret } from '@/lib/stripe';
 
@@ -93,7 +94,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
     console.log(`[Webhook] Payment record created for booking ${booking.id}`);
 
-    // Send booking confirmation email to customer
+    // Send booking confirmation email + SMS to customer
     try {
         const emailData = bookingConfirmationEmail({
             customerName: booking.user.firstName || 'Customer',
@@ -108,8 +109,19 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
         await sendEmailNotification(booking.userId, emailData, { bookingId: booking.id, type: 'BOOKING_CONFIRMATION' });
         console.log(`[Webhook] Sent booking confirmation email to ${booking.user.email}`);
+
+        // Send SMS if phone available
+        if (booking.user.phone) {
+            const smsMessage = SMS_TEMPLATES.bookingConfirmation(
+                booking.user.firstName || 'Customer',
+                new Date(booking.scheduledDate).toLocaleDateString(),
+                booking.timeWindow || 'TBD'
+            );
+            await sendSMSNotification(booking.userId, booking.user.phone, smsMessage, { bookingId: booking.id, type: 'BOOKING_CONFIRMATION' });
+            console.log(`[Webhook] Sent booking confirmation SMS to ${booking.user.phone}`);
+        }
     } catch (err) {
-        console.error(`[Webhook] Failed to send confirmation email:`, err);
+        console.error(`[Webhook] Failed to send confirmation notification:`, err);
     }
 
     // Trigger Cleaner Matching
@@ -137,7 +149,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
             console.log(`[Webhook] Assigned cleaner ${topMatch.cleaner.id} to booking ${booking.id}`);
 
-            // Send job offer email to cleaner
+            // Send job offer email + SMS to cleaner
             try {
                 const cleanerUser = topMatch.cleaner.user;
                 const financialSettings = await prisma.financialSettings.findFirst();
@@ -157,8 +169,20 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
 
                 await sendEmailNotification(cleanerUser.id, jobOfferData, { bookingId: booking.id, type: 'JOB_OFFER' });
                 console.log(`[Webhook] Sent job offer email to ${cleanerUser.email}`);
+
+                // Send SMS if phone available
+                if (cleanerUser.phone) {
+                    const smsMessage = SMS_TEMPLATES.jobOffer(
+                        cleanerUser.firstName || 'Pro',
+                        booking.address ? `${booking.address.city}` : 'See app',
+                        new Date(booking.scheduledDate).toLocaleDateString(),
+                        estimatedPayout
+                    );
+                    await sendSMSNotification(cleanerUser.id, cleanerUser.phone, smsMessage, { bookingId: booking.id, type: 'JOB_OFFER' });
+                    console.log(`[Webhook] Sent job offer SMS to ${cleanerUser.phone}`);
+                }
             } catch (err) {
-                console.error(`[Webhook] Failed to send job offer email:`, err);
+                console.error(`[Webhook] Failed to send job offer notification:`, err);
             }
         } else {
             console.log(`[Webhook] No matching cleaners found for booking ${booking.id}`);

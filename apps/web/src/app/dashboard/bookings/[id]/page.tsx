@@ -245,7 +245,14 @@ export default async function BookingDetailsPage({ params }: Props) {
           </div>
 
           {/* Actions - usando componente client para funcionalidade */}
-          <BookingDetailsClient bookingId={booking.id} status={booking.status} />
+          <BookingDetailsClient 
+            bookingId={booking.id} 
+            status={booking.status}
+            cleanerName={assignment?.cleaner?.user?.firstName || 'Your Cleaner'}
+            scheduledDate={booking.scheduledDate}
+            totalPrice={booking.totalPrice}
+            tipAmount={(booking as any).tipAmount || 0}
+          />
         </div>
       </div>
     </div>

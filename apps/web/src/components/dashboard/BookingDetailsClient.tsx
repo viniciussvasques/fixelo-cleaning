@@ -2,51 +2,40 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Heart, AlertTriangle, RefreshCw } from 'lucide-react';
+import { TipModal } from '@/components/bookings/tip-modal';
+import { QualityIssueForm } from '@/components/bookings/quality-issue-form';
+import { CancellationModal } from '@/components/bookings/cancellation-modal';
 
 interface BookingDetailsClientProps {
     bookingId: string;
     status: string;
+    cleanerName?: string;
+    scheduledDate?: Date;
+    totalPrice?: number;
+    tipAmount?: number;
 }
 
-export default function BookingDetailsClient({ bookingId, status }: BookingDetailsClientProps) {
+export default function BookingDetailsClient({ 
+    bookingId, 
+    status,
+    cleanerName = 'Your Cleaner',
+    scheduledDate = new Date(),
+    totalPrice = 0,
+    tipAmount = 0,
+}: BookingDetailsClientProps) {
     const router = useRouter();
     const [showCancelModal, setShowCancelModal] = useState(false);
-    const [cancelReason, setCancelReason] = useState('');
-    const [isCancelling, setIsCancelling] = useState(false);
-    const [error, setError] = useState('');
+    const [showTipModal, setShowTipModal] = useState(false);
+    const [showQualityModal, setShowQualityModal] = useState(false);
 
-    const canCancel = status !== 'COMPLETED' && status !== 'CANCELLED';
+    const canCancel = !['COMPLETED', 'CANCELLED', 'REFUNDED'].includes(status);
+    const isCompleted = status === 'COMPLETED';
+    const canTip = isCompleted && tipAmount === 0;
+    const canReportIssue = isCompleted;
 
-    const handleCancel = async () => {
-        if (cancelReason.trim().length < 10) {
-            setError('Please provide a reason (minimum 10 characters)');
-            return;
-        }
-
-        setError('');
-        setIsCancelling(true);
-
-        try {
-            const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: cancelReason }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to cancel booking');
-            }
-
-            setShowCancelModal(false);
-            router.refresh();
-        } catch (err) {
-            const message = err instanceof Error ? err.message : 'Failed to cancel booking';
-            setError(message);
-        } finally {
-            setIsCancelling(false);
-        }
+    const handleSuccess = () => {
+        router.refresh();
     };
 
     return (
@@ -61,6 +50,37 @@ export default function BookingDetailsClient({ bookingId, status }: BookingDetai
                     Book Again
                 </button>
 
+                {/* Tip Button - only for completed bookings */}
+                {canTip && (
+                    <button
+                        onClick={() => setShowTipModal(true)}
+                        className="w-full px-4 py-2 bg-pink-500 hover:bg-pink-600 text-white rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Heart className="w-4 h-4" />
+                        Leave a Tip
+                    </button>
+                )}
+
+                {/* Already Tipped */}
+                {isCompleted && tipAmount > 0 && (
+                    <div className="w-full px-4 py-2 bg-pink-50 text-pink-700 rounded-md text-center text-sm">
+                        <Heart className="w-4 h-4 inline mr-1 fill-pink-500" />
+                        You tipped ${tipAmount.toFixed(2)}
+                    </div>
+                )}
+
+                {/* Report Issue Button - only for completed bookings */}
+                {canReportIssue && (
+                    <button
+                        onClick={() => setShowQualityModal(true)}
+                        className="w-full px-4 py-2 border border-orange-300 text-orange-700 hover:bg-orange-50 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                        <AlertTriangle className="w-4 h-4" />
+                        Report an Issue
+                    </button>
+                )}
+
+                {/* Cancel Button */}
                 {canCancel && (
                     <button
                         onClick={() => setShowCancelModal(true)}
@@ -69,73 +89,34 @@ export default function BookingDetailsClient({ bookingId, status }: BookingDetai
                         Cancel Booking
                     </button>
                 )}
-
-                {status === 'COMPLETED' && (
-                    <button
-                        className="w-full px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md font-medium transition-colors"
-                    >
-                        Leave a Review
-                    </button>
-                )}
             </div>
 
-            {/* Cancel Modal */}
-            {showCancelModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg max-w-md w-full p-6">
-                        <div className="flex items-center gap-3 text-red-600 mb-4">
-                            <AlertCircle className="h-6 w-6" />
-                            <h2 className="text-xl font-semibold">Cancel Booking</h2>
-                        </div>
+            {/* Tip Modal */}
+            <TipModal
+                isOpen={showTipModal}
+                onClose={() => setShowTipModal(false)}
+                bookingId={bookingId}
+                cleanerName={cleanerName}
+                onSuccess={handleSuccess}
+            />
 
-                        <p className="text-gray-600 mb-4">
-                            Are you sure you want to cancel this booking? This action cannot be undone.
-                        </p>
+            {/* Quality Issue Modal */}
+            <QualityIssueForm
+                isOpen={showQualityModal}
+                onClose={() => setShowQualityModal(false)}
+                bookingId={bookingId}
+                onSuccess={handleSuccess}
+            />
 
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-                                <p className="text-sm text-red-800">{error}</p>
-                            </div>
-                        )}
-
-                        <div className="mb-4">
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Cancellation Reason *
-                            </label>
-                            <textarea
-                                value={cancelReason}
-                                onChange={(e) => setCancelReason(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
-                                rows={4}
-                                placeholder="Please tell us why you're cancelling..."
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Minimum 10 characters</p>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowCancelModal(false);
-                                    setCancelReason('');
-                                    setError('');
-                                }}
-                                disabled={isCancelling}
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 font-medium disabled:opacity-50"
-                            >
-                                Keep Booking
-                            </button>
-                            <button
-                                onClick={handleCancel}
-                                disabled={isCancelling}
-                                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                                {isCancelling && <Loader2 className="h-4 w-4 animate-spin" />}
-                                {isCancelling ? 'Cancelling...' : 'Cancel Booking'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Cancellation Modal */}
+            <CancellationModal
+                isOpen={showCancelModal}
+                onClose={() => setShowCancelModal(false)}
+                bookingId={bookingId}
+                scheduledDate={scheduledDate}
+                totalPrice={totalPrice}
+                onSuccess={handleSuccess}
+            />
         </>
     );
 }

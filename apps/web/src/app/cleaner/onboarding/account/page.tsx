@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Phone, User } from 'lucide-react';
+import { Loader2, Phone, User, CheckCircle } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 
 const accountSchema = z.object({
     firstName: z.string().min(2, 'First name is required'),
@@ -21,15 +22,47 @@ type AccountFormData = z.infer<typeof accountSchema>;
 
 export default function AccountStep() {
     const router = useRouter();
+    const { data: session } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     const {
         register,
         handleSubmit,
+        setValue,
         formState: { errors },
     } = useForm<AccountFormData>({
         resolver: zodResolver(accountSchema),
     });
+
+    // Pre-fill form with existing user data
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const res = await fetch('/api/user/profile');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.firstName) setValue('firstName', data.firstName);
+                    if (data.lastName) setValue('lastName', data.lastName);
+                    if (data.phone) setValue('phone', data.phone);
+                }
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        if (session?.user) {
+            // Also try to use session data
+            const nameParts = session.user.name?.split(' ') || [];
+            if (nameParts[0]) setValue('firstName', nameParts[0]);
+            if (nameParts[1]) setValue('lastName', nameParts.slice(1).join(' '));
+            fetchUserData();
+        } else {
+            setIsLoading(false);
+        }
+    }, [session, setValue]);
 
     const onSubmit = async (data: AccountFormData) => {
         setIsSubmitting(true);
@@ -54,11 +87,23 @@ export default function AccountStep() {
         }
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="text-center">
-                <h1 className="text-2xl font-bold text-slate-900">Create Your Account</h1>
-                <p className="text-slate-600 mt-1">Let's start with your basic information</p>
+                <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-medium mb-3">
+                    <CheckCircle className="w-4 h-4" />
+                    Account Created
+                </div>
+                <h1 className="text-2xl font-bold text-slate-900">Verify Your Information</h1>
+                <p className="text-slate-600 mt-1">Please confirm your details are correct</p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-md mx-auto">
@@ -117,7 +162,7 @@ export default function AccountStep() {
                             Saving...
                         </>
                     ) : (
-                        'Continue to Identity Verification'
+                        'Confirm & Continue'
                     )}
                 </Button>
             </form>

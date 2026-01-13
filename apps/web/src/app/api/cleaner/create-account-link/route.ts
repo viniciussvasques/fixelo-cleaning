@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { auth } from '@/lib/auth'; // Ensure this path is correct
-import { prisma } from '@fixelo/database'; // Ensure this path is correct
+import { getStripeClient } from '@/lib/stripe';
+import { auth } from '@/lib/auth';
+import { prisma } from '@fixelo/database';
 
 export async function POST(_req: Request) {
     try {
@@ -10,6 +10,9 @@ export async function POST(_req: Request) {
         if (!session?.user?.email) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
+
+        // Get Stripe client dynamically
+        const stripe = await getStripeClient();
 
         // 1. Get Cleaner Profile
         const cleaner = await prisma.cleanerProfile.findUnique({

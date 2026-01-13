@@ -9,16 +9,23 @@ import {
     Settings,
     Package,
     Calendar,
-    LogOut
+    LogOut,
+    DollarSign,
+    HeadphonesIcon,
+    AlertTriangle,
+    TrendingUp,
 } from "lucide-react";
 import { AdminMobileNav } from "@/components/admin/admin-mobile-nav";
 
 const navItems = [
     { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/admin/bookings', icon: Calendar, label: 'Bookings' },
-    { href: '/admin/services', icon: Package, label: 'Services' },
-    { href: '/admin/services/addons', icon: Package, label: 'Add-ons' },
     { href: '/admin/users', icon: Users, label: 'Users' },
+    { href: '/admin/payouts', icon: DollarSign, label: 'Payouts' },
+    { href: '/admin/support', icon: HeadphonesIcon, label: 'Support' },
+    { href: '/admin/quality-issues', icon: AlertTriangle, label: 'Quality Issues' },
+    { href: '/admin/services', icon: Package, label: 'Services' },
+    { href: '/admin/analytics', icon: TrendingUp, label: 'Analytics' },
     { href: '/admin/settings', icon: Settings, label: 'Settings' },
 ];
 

@@ -4,12 +4,15 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useBookingStore } from '@/store/booking';
 import Link from 'next/link';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { CheckCircle, XCircle, CalendarClock } from 'lucide-react';
+import { RecurringSetup } from '@/components/bookings/recurring-setup';
 
 function SuccessPageContent() {
     const searchParams = useSearchParams();
-    const { reset, selectedDate, selectedTimeSlot, address, serviceId } = useBookingStore();
+    const { reset, selectedDate, selectedTimeSlot, address, serviceId, homeDetails } = useBookingStore();
     const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
+    const [showRecurring, setShowRecurring] = useState(false);
+    const [bookingData, setBookingData] = useState<any>(null);
     const payment_intent_client_secret = searchParams.get('payment_intent_client_secret');
 
     // We need to verify the payment intent status here
@@ -43,19 +46,21 @@ function SuccessPageContent() {
                     }),
                 });
 
+                const data = await response.json();
+                
                 if (!response.ok) {
-                    const data = await response.json();
                     if (data.message === 'Booking already exists') {
                         // Already created, just show success
                         setStatus('success');
-                        reset();
+                        setBookingData(data.booking);
                         return;
                     }
                     throw new Error(data.error || 'Failed to create booking');
                 }
 
+                setBookingData(data.booking);
                 setStatus('success');
-                reset(); // Clear the store
+                // Don't reset immediately - we need the data for recurring setup
             } catch (error) {
                 console.error('Save booking error:', error);
                 setStatus('failed');
@@ -94,6 +99,40 @@ function SuccessPageContent() {
         );
     }
 
+    // Show recurring setup
+    if (showRecurring && bookingData) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
+                <div className="max-w-lg w-full">
+                    <RecurringSetup
+                        serviceTypeId={bookingData.serviceTypeId || serviceId || ''}
+                        addressId={bookingData.addressId || ''}
+                        bedrooms={bookingData.bedrooms || homeDetails?.bedrooms || 2}
+                        bathrooms={bookingData.bathrooms || homeDetails?.bathrooms || 1}
+                        hasPets={bookingData.hasPets || homeDetails?.hasPets || false}
+                        specialInstructions={bookingData.specialInstructions}
+                        onSuccess={() => {
+                            reset();
+                        }}
+                        onSkip={() => {
+                            reset();
+                            setShowRecurring(false);
+                        }}
+                    />
+                    <button
+                        onClick={() => {
+                            reset();
+                            setShowRecurring(false);
+                        }}
+                        className="w-full mt-4 text-center text-gray-500 hover:text-gray-700 text-sm"
+                    >
+                        Skip and go to dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
             <div className="bg-white p-8 rounded-lg shadow-md max-w-lg w-full text-center">
@@ -110,15 +149,47 @@ function SuccessPageContent() {
                             <span className="text-gray-600">Status</span>
                             <span className="text-green-600 font-medium bg-green-50 px-2 py-1 rounded text-sm border border-green-200">Confirmed</span>
                         </div>
-                        {/* We use local state or store if accessible, but store is reset. Real app would fetch from DB using ID */}
+                        {bookingData && (
+                            <>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-600">Total</span>
+                                    <span className="font-semibold">${bookingData.totalPrice?.toFixed(2)}</span>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
+                {/* Recurring Setup Promo */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-center gap-3 mb-2">
+                        <CalendarClock className="w-6 h-6 text-blue-600" />
+                        <h4 className="font-semibold text-blue-900">Save up to 15% with recurring cleaning!</h4>
+                    </div>
+                    <p className="text-sm text-blue-700 mb-3">
+                        Set up weekly, bi-weekly, or monthly cleanings and save on every booking.
+                    </p>
+                    <button
+                        onClick={() => setShowRecurring(true)}
+                        className="w-full py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                    >
+                        Set Up Recurring Cleaning
+                    </button>
+                </div>
+
                 <div className="space-y-4">
-                    <Link href="/dashboard" className="block w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold transition-colors">
+                    <Link 
+                        href="/dashboard" 
+                        className="block w-full py-3 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold transition-colors"
+                        onClick={() => reset()}
+                    >
                         Go to Dashboard
                     </Link>
-                    <Link href="/" className="block w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">
+                    <Link 
+                        href="/" 
+                        className="block w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                        onClick={() => reset()}
+                    >
                         Return Home
                     </Link>
                 </div>

@@ -4,6 +4,8 @@ import { auth } from '@/lib/auth';
 import { getStripeClient } from '@/lib/stripe';
 import { findMatches } from '@/lib/matching';
 import { sendEmailNotification } from '@/lib/email';
+import { sendSMSNotification, SMS_TEMPLATES } from '@/lib/sms';
+import { bookingConfirmationEmail, newJobOfferEmail } from '@/lib/email-templates';
 
 export async function POST(req: Request) {
     try {
@@ -81,11 +83,19 @@ export async function POST(req: Request) {
             const totalAmount = paymentIntent.amount / 100; // Final paid amount
             const discountAmount = parseFloat(metadata.discountAmount || '0');
             const referralCode = metadata.referralCode;
+            const recurringId = metadata.recurringId || null;
+            const discountType = metadata.discountType || 'none';
             const creditsUsed = metadata.creditsUsed === 'true';
 
-            // Simplified Fee Logic
-            const stripeFee = (totalAmount * 0.029) + 0.30;
-            const insuranceFee = totalAmount * 0.02;
+            // Get financial settings for accurate fee calculation
+            const financialSettings = await prisma.financialSettings.findFirst();
+            const stripeFeePercent = financialSettings?.stripeFeePercent ?? 0.029;
+            const stripeFeeFixed = financialSettings?.stripeFeeFixed ?? 0.30;
+            const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+
+            // Accurate Fee Logic using settings
+            const stripeFee = (totalAmount * stripeFeePercent) + stripeFeeFixed;
+            const insuranceFee = totalAmount * insuranceFeePercent;
             const netAmount = totalAmount - stripeFee;
 
             // Handle Credit Deduction
@@ -150,6 +160,10 @@ export async function POST(req: Request) {
                     estimatedDuration: service.baseTime,
                     bedrooms: homeDetails.bedrooms,
                     bathrooms: homeDetails.bathrooms,
+                    // Recurring booking link
+                    recurringId: recurringId || undefined,
+                    discountPercent: discountType.includes('recurring') ? (discountAmount / baseAmount) : 0,
+                    discountAmount: discountAmount,
                     hasPets: homeDetails.hasPets,
                     squareFootage: homeDetails.squareFootage,
                     specialInstructions: specialInstructions,
@@ -188,7 +202,46 @@ export async function POST(req: Request) {
             return newBooking;
         });
 
-        // 5. Trigger Matching Algorithm (Async but awaited for MVP response simplicity)
+        // 5. Send Booking Confirmation to Customer
+        if (userId && session?.user?.email) {
+            try {
+                // Get user details
+                const customer = await prisma.user.findUnique({
+                    where: { id: userId },
+                    select: { firstName: true, phone: true }
+                });
+
+                // Send confirmation email
+                const emailData = bookingConfirmationEmail({
+                    customerName: customer?.firstName || 'Customer',
+                    bookingId: booking.id,
+                    serviceName: service?.name || 'Cleaning',
+                    scheduledDate: booking.scheduledDate,
+                    scheduledTime: booking.timeWindow || 'TBD',
+                    address: address ? `${address.street}, ${address.city}` : 'Address on file',
+                    totalPrice: booking.totalPrice,
+                });
+                emailData.to = session.user.email;
+
+                await sendEmailNotification(userId, emailData, { bookingId: booking.id, type: 'BOOKING_CONFIRMATION' });
+                console.log(`✅ Booking confirmation email sent to ${session.user.email}`);
+
+                // Send SMS if phone available
+                if (customer?.phone) {
+                    const smsMessage = SMS_TEMPLATES.bookingConfirmation(
+                        customer.firstName || 'Customer',
+                        new Date(booking.scheduledDate).toLocaleDateString(),
+                        booking.timeWindow || 'TBD'
+                    );
+                    await sendSMSNotification(userId, customer.phone, smsMessage, { bookingId: booking.id, type: 'BOOKING_CONFIRMATION' });
+                    console.log(`✅ Booking confirmation SMS sent to ${customer.phone}`);
+                }
+            } catch (notifError) {
+                console.error('❌ Error sending booking confirmation:', notifError);
+            }
+        }
+
+        // 6. Trigger Matching Algorithm (Async but awaited for MVP response simplicity)
         try {
             console.log(`🔍 Finding matches for Booking ${booking.id}...`);
             const potentialMatches = await findMatches(booking.id);
@@ -208,29 +261,53 @@ export async function POST(req: Request) {
                     }))
                 });
 
-                // Send Email Notifications to cleaners via SMTP
+                // Get financial settings for payout calculation
+                const financialSettings = await prisma.financialSettings.findFirst();
+                const platformFeePercent = financialSettings?.platformFeePercent ?? 0.15;
+                const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+                const stripeFeePercent = financialSettings?.stripeFeePercent ?? 0.029;
+                const stripeFeeFixed = financialSettings?.stripeFeeFixed ?? 0.30;
+
+                // Send Email + SMS Notifications to cleaners
                 for (const match of topCleaners) {
+                    const cleanerUser = match.cleaner.user;
+                    // Calculate NET payout: Total - Stripe - Platform - Insurance
+                    const stripeFee = (booking.totalPrice * stripeFeePercent) + stripeFeeFixed;
+                    const estimatedPayout = (booking.totalPrice - stripeFee) * (1 - platformFeePercent - insuranceFeePercent);
+
+                    // Send Email using template
                     try {
-                        await sendEmailNotification(
-                            match.cleaner.userId,
-                            {
-                                to: match.cleaner.user.email,
-                                subject: 'Nova Oferta de Trabalho! - Fixelo',
-                                html: `
-                                    <h2>Nova Oferta de Trabalho!</h2>
-                                    <p>Você recebeu uma nova oferta de trabalho no valor de <strong>$${booking.totalPrice.toFixed(2)} USD</strong></p>
-                                    <p><strong>Localização:</strong> ${address.city}</p>
-                                    <p><strong>Data:</strong> ${new Date(booking.scheduledDate).toLocaleDateString('pt-BR')}</p>
-                                    <p>Acesse sua área do cleaner para aceitar esta oferta.</p>
-                                    <p><a href="${process.env.NEXTAUTH_URL}/cleaner/jobs">Ver Ofertas</a></p>
-                                `,
-                                text: `Nova oferta de trabalho no valor de $${booking.totalPrice.toFixed(2)} USD em ${address.city}. Acesse sua área do cleaner para aceitar.`,
-                            },
-                            { bookingId: booking.id }
-                        );
+                        const emailData = newJobOfferEmail({
+                            cleanerName: cleanerUser.firstName || 'Pro',
+                            serviceName: service?.name || 'Cleaning',
+                            address: address?.city || 'See app',
+                            scheduledDate: booking.scheduledDate,
+                            scheduledTime: booking.timeWindow || 'TBD',
+                            estimatedPayout,
+                            bookingId: booking.id,
+                        });
+                        emailData.to = cleanerUser.email;
+
+                        await sendEmailNotification(cleanerUser.id, emailData, { bookingId: booking.id, type: 'JOB_OFFER' });
+                        console.log(`✅ Job offer email sent to ${cleanerUser.email}`);
                     } catch (error) {
-                        console.error(`Erro ao enviar email para cleaner ${match.cleaner.userId}:`, error);
-                        // Continuar enviando para os outros mesmo se um falhar
+                        console.error(`❌ Error sending email to cleaner ${cleanerUser.id}:`, error);
+                    }
+
+                    // Send SMS if phone available
+                    if (cleanerUser.phone) {
+                        try {
+                            const smsMessage = SMS_TEMPLATES.jobOffer(
+                                cleanerUser.firstName || 'Pro',
+                                address?.city || 'See app',
+                                new Date(booking.scheduledDate).toLocaleDateString(),
+                                estimatedPayout
+                            );
+                            await sendSMSNotification(cleanerUser.id, cleanerUser.phone, smsMessage, { bookingId: booking.id, type: 'JOB_OFFER' });
+                            console.log(`✅ Job offer SMS sent to ${cleanerUser.phone}`);
+                        } catch (error) {
+                            console.error(`❌ Error sending SMS to cleaner ${cleanerUser.id}:`, error);
+                        }
                     }
                 }
 

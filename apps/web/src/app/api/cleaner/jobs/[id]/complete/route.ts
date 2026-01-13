@@ -9,6 +9,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { auth } from '@/lib/auth';
 import { processJobCompletion } from '@/lib/stripe-connect';
+import { sendEmailNotification } from '@/lib/email';
+import { sendSMSNotification, SMS_TEMPLATES } from '@/lib/sms';
 
 export async function POST(
     request: Request,
@@ -76,6 +78,75 @@ export async function POST(
         if (!payoutResult.success) {
             console.error(`[JobComplete] Payout failed for booking ${bookingId}:`, payoutResult.error);
             // Don't fail the request - job is complete, payout can be retried
+        }
+
+        // Send notifications
+        try {
+            const booking = await prisma.booking.findUnique({
+                where: { id: bookingId },
+                include: { 
+                    user: true,
+                    serviceType: true,
+                }
+            });
+
+            const cleanerWithUser = await prisma.cleanerProfile.findUnique({
+                where: { id: cleaner.id },
+                include: { user: true }
+            });
+
+            if (booking?.user) {
+                const customer = booking.user;
+
+                // Send completion email to customer with review request
+                await sendEmailNotification(customer.id, {
+                    to: customer.email,
+                    subject: 'Your Cleaning is Complete! Leave a Review 🌟',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h1 style="color: #22c55e;">Cleaning Complete! ✨</h1>
+                            <p>Hi ${customer.firstName || 'there'},</p>
+                            <p>Your ${booking.serviceType?.name || 'cleaning'} has been completed.</p>
+                            <p>We hope everything looks great! Your feedback helps us maintain high standards.</p>
+                            <p style="text-align: center; margin: 30px 0;">
+                                <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/bookings/${bookingId}/review" 
+                                   style="background-color: #2563eb; color: white; padding: 12px 24px; 
+                                          text-decoration: none; border-radius: 8px; font-weight: bold;">
+                                    Leave a Review
+                                </a>
+                            </p>
+                            <p style="color: #666; font-size: 14px;">
+                                Thank you for choosing Fixelo!
+                            </p>
+                        </div>
+                    `,
+                }, { bookingId, type: 'JOB_COMPLETED' });
+                console.log(`✅ Job completion email sent to ${customer.email}`);
+
+                // SMS to customer
+                if (customer.phone) {
+                    await sendSMSNotification(
+                        customer.id,
+                        customer.phone,
+                        `Your Fixelo cleaning is complete! ✨ Hope it looks great. Leave a review: ${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+                        { bookingId, type: 'JOB_COMPLETED' }
+                    );
+                }
+            }
+
+            // SMS to cleaner about payment
+            if (cleanerWithUser?.user.phone && payoutResult.success) {
+                const payoutAmount = booking?.totalPrice ? booking.totalPrice * 0.85 : 0;
+                await sendSMSNotification(
+                    cleanerWithUser.userId,
+                    cleanerWithUser.user.phone,
+                    SMS_TEMPLATES.paymentReceived(cleanerWithUser.user.firstName || 'Pro', payoutAmount),
+                    { bookingId, type: 'PAYOUT_PROCESSED' }
+                );
+                console.log(`✅ Payment SMS sent to cleaner`);
+            }
+        } catch (notifError) {
+            console.error('❌ Error sending completion notifications:', notifError);
         }
 
         return NextResponse.json({

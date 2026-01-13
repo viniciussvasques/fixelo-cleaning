@@ -1,4 +1,4 @@
-import { stripe } from '@/lib/stripe';
+import { getStripeClient } from '@/lib/stripe';
 import { prisma } from '@fixelo/database';
 import { withAuth, handleError, successResponse, ApiError } from '@/lib/api-utils';
 
@@ -18,6 +18,8 @@ const db = prisma as unknown as {
 export async function GET() {
     return withAuth(async (_userId, email) => {
         try {
+            const stripe = await getStripeClient();
+            
             const user = await db.user.findUnique({
                 where: { email },
                 select: { stripeCustomerId: true }
@@ -48,6 +50,8 @@ export async function GET() {
 export async function POST(_req: Request) {
     return withAuth(async (userId, email) => {
         try {
+            const stripe = await getStripeClient();
+            
             const user = await db.user.findUnique({
                 where: { email },
                 select: { id: true, stripeCustomerId: true }
@@ -87,6 +91,8 @@ export async function POST(_req: Request) {
 export async function DELETE(req: Request) {
     return withAuth(async () => {
         try {
+            const stripe = await getStripeClient();
+            
             const { searchParams } = new URL(req.url);
             const paymentMethodId = searchParams.get('id');
 

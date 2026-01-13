@@ -6,6 +6,9 @@ import { updateCleanerMetrics } from "@/lib/metrics";
 import { UserRole, BookingStatus, AssignmentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { sendEmailNotification } from "@/lib/email";
+import { sendSMSNotification, SMS_TEMPLATES } from "@/lib/sms";
+import { cleanerAssignedEmail } from "@/lib/email-templates";
 
 export async function acceptJob(id: string) {
     const session = await auth();
@@ -94,6 +97,56 @@ export async function acceptJob(id: string) {
     // Recalculate Rates
     await updateCleanerMetrics(cleaner.id);
 
+    // Send notification to customer
+    try {
+        const bookingWithDetails = await prisma.booking.findUnique({
+            where: { id: bookingId },
+            include: {
+                user: true,
+                serviceType: true,
+            }
+        });
+
+        const cleanerWithUser = await prisma.cleanerProfile.findUnique({
+            where: { id: cleaner.id },
+            include: { user: true }
+        });
+
+        if (bookingWithDetails?.user && cleanerWithUser) {
+            const customer = bookingWithDetails.user;
+            const cleanerName = `${cleanerWithUser.user.firstName || ''} ${cleanerWithUser.user.lastName || ''}`.trim() || 'Your Cleaner';
+
+            // Send "Cleaner Assigned" email to customer
+            const emailData = cleanerAssignedEmail({
+                customerName: customer.firstName || 'Customer',
+                cleanerName,
+                cleanerRating: cleanerWithUser.rating || 5.0,
+                scheduledDate: bookingWithDetails.scheduledDate,
+                scheduledTime: bookingWithDetails.timeWindow || 'TBD',
+            });
+            emailData.to = customer.email;
+
+            await sendEmailNotification(customer.id, emailData, { 
+                bookingId, 
+                type: 'CLEANER_ASSIGNED' 
+            });
+
+            // Send SMS if phone available
+            if (customer.phone) {
+                const smsMessage = SMS_TEMPLATES.cleanerAssigned(
+                    customer.firstName || 'Customer',
+                    cleanerName
+                );
+                await sendSMSNotification(customer.id, customer.phone, smsMessage, { 
+                    bookingId, 
+                    type: 'CLEANER_ASSIGNED' 
+                });
+            }
+        }
+    } catch (notifError) {
+        console.error('Error sending cleaner assigned notification:', notifError);
+    }
+
     revalidatePath("/cleaner/jobs");
     revalidatePath("/cleaner/dashboard");
     redirect(`/cleaner/jobs/${assignmentId || bookingId}`);
@@ -106,14 +159,19 @@ export async function completeJob(bookingId: string) {
     }
 
     const cleaner = await prisma.cleanerProfile.findUnique({
-        where: { userId: session.user.id }
+        where: { userId: session.user.id },
+        include: { user: true }
     });
     if (!cleaner) throw new Error("Cleaner profile not found");
 
     // 1. Update Booking
-    await prisma.booking.update({
+    const booking = await prisma.booking.update({
         where: { id: bookingId },
-        data: { status: BookingStatus.COMPLETED }
+        data: { status: BookingStatus.COMPLETED },
+        include: {
+            user: true,
+            serviceType: true,
+        }
     });
 
     // 2. Increment Completed Count
@@ -124,6 +182,47 @@ export async function completeJob(bookingId: string) {
 
     // 3. Update Metrics
     await updateCleanerMetrics(cleaner.id);
+
+    // 4. Send notifications
+    try {
+        const customer = booking.user;
+
+        // Send completion email to customer with review request
+        await sendEmailNotification(customer.id, {
+            to: customer.email,
+            subject: 'Your Cleaning is Complete! Leave a Review 🌟',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                    <h1 style="color: #22c55e;">Cleaning Complete! ✨</h1>
+                    <p>Hi ${customer.firstName || 'there'},</p>
+                    <p>Your ${booking.serviceType?.name || 'cleaning'} has been completed.</p>
+                    <p>We hope everything looks great! Your feedback helps us maintain high standards.</p>
+                    <p style="text-align: center; margin: 30px 0;">
+                        <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/bookings/${bookingId}/review" 
+                           style="background-color: #2563eb; color: white; padding: 12px 24px; 
+                                  text-decoration: none; border-radius: 8px; font-weight: bold;">
+                            Leave a Review
+                        </a>
+                    </p>
+                    <p style="color: #666; font-size: 14px;">
+                        Thank you for choosing Fixelo!
+                    </p>
+                </div>
+            `,
+        }, { bookingId, type: 'JOB_COMPLETED' });
+
+        // SMS to customer
+        if (customer.phone) {
+            await sendSMSNotification(
+                customer.id,
+                customer.phone,
+                `Your Fixelo cleaning is complete! ✨ Hope it looks great. Leave a review: ${process.env.NEXT_PUBLIC_APP_URL}/dashboard`,
+                { bookingId, type: 'JOB_COMPLETED' }
+            );
+        }
+    } catch (notifError) {
+        console.error('Error sending completion notifications:', notifError);
+    }
 
     revalidatePath(`/cleaner/jobs/${bookingId}`);
 }
