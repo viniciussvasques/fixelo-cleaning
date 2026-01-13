@@ -178,20 +178,40 @@ services:
       timeout: 5s
       retries: 5
 
-# ============================================
-# Volumes
-# ============================================
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  traefik_letsencrypt:
-    driver: local
+  # ============================================
+  # Portainer - Container Management UI
+  # ============================================
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: fixelo-portainer
+    restart: always
+    command: -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - fixelo-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN:-fixelo.app}`)"
+      - "traefik.http.routers.portainer.entrypoints=websecure"
+      - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
-# ============================================
-# Networks
-# ============================================
+# =============================================
+# Docker Networks
+# =============================================
 networks:
   fixelo-network:
     driver: bridge
+
+# =============================================
+# Docker Volumes
+# =============================================
+volumes:
+  postgres_data:
+  redis_data:
+  traefik_letsencrypt:
+  portainer_data:
+
+
