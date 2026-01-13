@@ -7,6 +7,9 @@
 import { getIntegrationConfigs } from './actions';
 import { IntegrationsForm } from './integrations-form';
 
+export const dynamic = 'force-dynamic';
+
+
 export default async function IntegrationsPage() {
     const configs = await getIntegrationConfigs();
 

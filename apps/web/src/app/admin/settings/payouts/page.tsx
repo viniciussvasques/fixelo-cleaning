@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Save, DollarSign, Calendar, Clock } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+
 interface PayoutSettings {
     autoPayoutEnabled: boolean;
     payoutSchedule: string;

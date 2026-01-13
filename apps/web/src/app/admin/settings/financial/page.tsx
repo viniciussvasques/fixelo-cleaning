@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+export const dynamic = 'force-dynamic';
+
+
 export default function FinancialSettingsPage() {
     const [loading, setLoading] = useState(true);
     const { register, handleSubmit, setValue, watch } = useForm();

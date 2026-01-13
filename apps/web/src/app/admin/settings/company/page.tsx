@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Save, Building2, Phone, Globe } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+
 interface CompanySettings {
     companyName: string;
     supportEmail: string;

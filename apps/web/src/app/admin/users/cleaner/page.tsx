@@ -4,6 +4,9 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Clock, CheckCircle, XCircle, Eye, User, FileText } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+
 const statusConfig: Record<string, { label: string; color: string; icon: typeof Clock }> = {
     PENDING: { label: 'Pending', color: 'bg-yellow-100 text-yellow-800', icon: Clock },
     UNDER_REVIEW: { label: 'Under Review', color: 'bg-blue-100 text-blue-800', icon: Eye },

@@ -10,6 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, Save, Clock, MapPin, Calendar } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+
 interface BusinessSettings {
     businessHoursStart: string;
     businessHoursEnd: string;

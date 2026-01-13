@@ -13,6 +13,8 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { formatCurrency, formatDate, BOOKING_STATUS } from '@/lib/constants';
 import { Calendar } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminBookingsPage() {
     const bookings = await prisma.booking.findMany({
         orderBy: { scheduledDate: 'desc' },

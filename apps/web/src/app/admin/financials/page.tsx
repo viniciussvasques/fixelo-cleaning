@@ -12,6 +12,8 @@ import {
     PiggyBank,
 } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function FinancialDashboardPage() {
     const today = new Date();
     const monthStart = startOfMonth(today);

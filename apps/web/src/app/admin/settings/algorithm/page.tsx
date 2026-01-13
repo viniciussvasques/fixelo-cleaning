@@ -8,6 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, Save, RotateCcw, Sliders } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+
 interface AlgorithmWeights {
     match_weight_rating: number;
     match_weight_distance: number;

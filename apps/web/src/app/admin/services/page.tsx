@@ -2,6 +2,10 @@ import Link from "next/link";
 import { prisma } from "@fixelo/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlusCircle } from "lucide-react";
+
+export const dynamic = 'force-dynamic';
+
 
 // Simple Badge component since it's missing in ui folder
 function StatusBadge({ active }: { active: boolean }) {

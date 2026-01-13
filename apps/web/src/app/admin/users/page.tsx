@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CleanerStatus, UserRole } from "@prisma/client";
 
+export const dynamic = 'force-dynamic';
+
 export default async function UsersPage() {
     const pendingCleaners = await prisma.cleanerProfile.findMany({
         where: { status: CleanerStatus.PENDING_APPROVAL },
@@ -82,8 +84,8 @@ export default async function UsersPage() {
                                         <td className="p-4 align-middle">{user.email}</td>
                                         <td className="p-4 align-middle">
                                             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${user.role === UserRole.ADMIN ? "bg-purple-100 text-purple-800" :
-                                                    user.role === UserRole.CLEANER ? "bg-blue-100 text-blue-800" :
-                                                        "bg-gray-100 text-gray-800"
+                                                user.role === UserRole.CLEANER ? "bg-blue-100 text-blue-800" :
+                                                    "bg-gray-100 text-gray-800"
                                                 }`}>
                                                 {user.role}
                                             </span>

@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { Plus, Edit, Timer, DollarSign } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
+
 export default async function AddOnsPage() {
     const addOns = await prisma.addOn.findMany({
         orderBy: { name: 'asc' }

@@ -18,8 +18,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatDate, BOOKING_STATUS } from '@/lib/constants';
 import { BookingStatus } from '@prisma/client';
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+
+export const dynamic = 'force-dynamic';
+
 
 export default async function AdminDashboard() {
     // Fetch stats

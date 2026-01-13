@@ -9,6 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Loader2, Save, Mail, Send, Eye, EyeOff } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
+
 interface EmailSettings {
     smtpHost: string;
     smtpPort: number;

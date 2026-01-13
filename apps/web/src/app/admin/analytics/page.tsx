@@ -10,6 +10,7 @@ import { StatCard } from '@/components/ui/stat-card';
 import { formatCurrency } from '@/lib/constants';
 import { BookingStatus } from '@prisma/client';
 
+
 export default async function AnalyticsPage() {
     // Revenue analytics
     const totalRevenue = await prisma.booking.aggregate({
