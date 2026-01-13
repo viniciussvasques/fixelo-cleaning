@@ -3,6 +3,8 @@ import { prisma } from '@fixelo/database';
 import { AssignmentStatus } from '@prisma/client';
 import { auth } from '@/lib/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const serviceTypes = await prisma.serviceType.findMany({

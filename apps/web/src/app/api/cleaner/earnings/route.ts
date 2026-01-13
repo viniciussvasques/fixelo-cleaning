@@ -3,6 +3,8 @@ import { prisma } from '@fixelo/database';
 import { auth } from '@/lib/auth';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const session = await auth();

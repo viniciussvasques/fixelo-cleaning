@@ -10,6 +10,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 
+export const dynamic = 'force-dynamic';
+
 // Cache configuration - 30 seconds TTL for quick updates after admin changes
 let configCache: Record<string, string> | null = null;
 let cacheTimestamp = 0;
