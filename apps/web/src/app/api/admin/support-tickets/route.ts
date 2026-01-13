@@ -7,6 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@fixelo/database';
+
+export const dynamic = 'force-dynamic';
 import { UserRole } from '@prisma/client';
 
 /**

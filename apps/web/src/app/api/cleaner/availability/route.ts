@@ -5,6 +5,8 @@
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
+
+export const dynamic = 'force-dynamic';
 import { auth } from '@/lib/auth';
 import { z } from 'zod';
 
@@ -35,7 +37,7 @@ export async function GET() {
 
         // Transform to a map for easier frontend use
         const availabilityMap: Record<string, { isActive: boolean; startTime: string; endTime: string }> = {};
-        
+
         for (const slot of cleaner.availability) {
             availabilityMap[slot.dayOfWeek] = {
                 isActive: slot.isActive,

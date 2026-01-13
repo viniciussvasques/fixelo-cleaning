@@ -7,6 +7,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@fixelo/database';
 import { UserRole, BookingStatus } from '@prisma/client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         const session = await auth();
