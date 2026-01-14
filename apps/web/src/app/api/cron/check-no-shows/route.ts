@@ -1,10 +1,26 @@
 import { NextResponse } from 'next/server';
 import { checkAndProcessNoShows } from '@/lib/no-show';
+import { prisma } from '@fixelo/database';
 
 export const dynamic = 'force-dynamic';
 
-// Cron secret for security
-const CRON_SECRET = process.env.CRON_SECRET;
+/**
+ * Get CRON_SECRET from database or env fallback
+ */
+async function getCronSecret(): Promise<string | null> {
+    // Try database first
+    try {
+        const config = await prisma.systemConfig.findUnique({
+            where: { key: 'cron_secret' },
+            select: { value: true }
+        });
+        if (config?.value) return config.value;
+    } catch {
+        // Database error, fall back to env
+    }
+    // Fallback to env var
+    return process.env.CRON_SECRET || null;
+}
 
 /**
  * Cron Job: Check for No-Show Cleaners
@@ -17,6 +33,9 @@ const CRON_SECRET = process.env.CRON_SECRET;
  * Security: Requires CRON_SECRET in Authorization header or query param
  */
 export async function GET(request: Request) {
+    // Get cron secret from database or env
+    const CRON_SECRET = await getCronSecret();
+
     // Verify cron secret
     const authHeader = request.headers.get('authorization');
     const url = new URL(request.url);
