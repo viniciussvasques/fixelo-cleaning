@@ -83,131 +83,141 @@ export async function POST(req: Request) {
             }
         });
 
-        // 4. Create Booking Transaction
-        const booking = await prisma.$transaction(async (tx) => {
-            const metadata = paymentIntent.metadata;
-            const baseAmount = parseFloat(metadata.baseAmount || '0');
-            const totalAmount = paymentIntent.amount / 100; // Final paid amount
-            const discountAmount = parseFloat(metadata.discountAmount || '0');
-            const referralCode = metadata.referralCode;
-            const recurringId = metadata.recurringId || null;
-            const discountType = metadata.discountType || 'none';
-            const creditsUsed = metadata.creditsUsed === 'true';
+        // 4. Create Booking Transaction (skip if updating from DRAFT)
+        let booking = currentBooking;
 
-            // Get financial settings for accurate fee calculation
-            const financialSettings = await prisma.financialSettings.findFirst();
-            const stripeFeePercent = financialSettings?.stripeFeePercent ?? 0.029;
-            const stripeFeeFixed = financialSettings?.stripeFeeFixed ?? 0.30;
-            const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+        if (!isUpdateFromDraft) {
+            booking = await prisma.$transaction(async (tx) => {
+                const metadata = paymentIntent.metadata;
+                const baseAmount = parseFloat(metadata.baseAmount || '0');
+                const totalAmount = paymentIntent.amount / 100; // Final paid amount
+                const discountAmount = parseFloat(metadata.discountAmount || '0');
+                const referralCode = metadata.referralCode;
+                const recurringId = metadata.recurringId || null;
+                const discountType = metadata.discountType || 'none';
+                const creditsUsed = metadata.creditsUsed === 'true';
 
-            // Accurate Fee Logic using settings
-            const stripeFee = (totalAmount * stripeFeePercent) + stripeFeeFixed;
-            const insuranceFee = totalAmount * insuranceFeePercent;
-            const netAmount = totalAmount - stripeFee;
+                // Get financial settings for accurate fee calculation
+                const financialSettings = await prisma.financialSettings.findFirst();
+                const stripeFeePercent = financialSettings?.stripeFeePercent ?? 0.029;
+                const stripeFeeFixed = financialSettings?.stripeFeeFixed ?? 0.30;
+                const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
 
-            // Handle Credit Deduction
-            if (userId && creditsUsed && discountAmount > 0) {
-                // Determine how much of the discount was from credits (if both referral + credits were used)
-                // For simplicity, let's assume credits were applied *after* the $20 referral if both exist.
-                const friendDiscount = referralCode ? 20 : 0;
-                const creditDeduction = Math.max(0, discountAmount - friendDiscount);
+                // Accurate Fee Logic using settings
+                const stripeFee = (totalAmount * stripeFeePercent) + stripeFeeFixed;
+                const insuranceFee = totalAmount * insuranceFeePercent;
+                const netAmount = totalAmount - stripeFee;
 
-                if (creditDeduction > 0) {
-                    await tx.user.update({
-                        where: { id: userId },
-                        data: { credits: { decrement: creditDeduction } }
-                    });
+                // Handle Credit Deduction
+                if (userId && creditsUsed && discountAmount > 0) {
+                    // Determine how much of the discount was from credits (if both referral + credits were used)
+                    // For simplicity, let's assume credits were applied *after* the $20 referral if both exist.
+                    const friendDiscount = referralCode ? 20 : 0;
+                    const creditDeduction = Math.max(0, discountAmount - friendDiscount);
+
+                    if (creditDeduction > 0) {
+                        await tx.user.update({
+                            where: { id: userId },
+                            data: { credits: { decrement: creditDeduction } }
+                        });
+                    }
                 }
-            }
 
-            // Handle Referral Recording
-            if (referralCode && userId) {
-                const referrer = await tx.user.findUnique({
-                    where: { referralCode }
-                });
-                if (referrer && referrer.id !== userId) {
-                    await tx.referral.create({
+                // Handle Referral Recording
+                if (referralCode && userId) {
+                    const referrer = await tx.user.findUnique({
+                        where: { referralCode }
+                    });
+                    if (referrer && referrer.id !== userId) {
+                        await tx.referral.create({
+                            data: {
+                                referrerId: referrer.id,
+                                referredId: userId,
+                                status: 'PENDING'
+                            }
+                        });
+                    }
+                }
+
+                // Address logic
+                let createdAddress = null;
+                if (userId && address) {
+                    createdAddress = await tx.address.create({
                         data: {
-                            referrerId: referrer.id,
-                            referredId: userId,
-                            status: 'PENDING'
+                            userId: userId,
+                            street: address.street,
+                            unit: address.unit,
+                            city: address.city,
+                            state: address.state,
+                            zipCode: address.zipCode,
+                            latitude: address.latitude || 40.7128,
+                            longitude: address.longitude || -74.0060,
+                            isDefault: false
                         }
                     });
                 }
-            }
 
-            // Address logic
-            let createdAddress = null;
-            if (userId && address) {
-                createdAddress = await tx.address.create({
+                // Create Booking
+                const newBooking = await tx.booking.create({
                     data: {
-                        userId: userId,
-                        street: address.street,
-                        unit: address.unit,
-                        city: address.city,
-                        state: address.state,
-                        zipCode: address.zipCode,
-                        latitude: address.latitude || 40.7128,
-                        longitude: address.longitude || -74.0060,
-                        isDefault: false
+                        userId: userId || 'guest',
+                        serviceTypeId: serviceId,
+                        status: 'PENDING',
+                        addressId: createdAddress?.id,
+                        addressSnapshot: address,
+                        scheduledDate: new Date(schedule.date),
+                        timeWindow: schedule.timeSlot,
+                        estimatedDuration: service.baseTime,
+                        bedrooms: homeDetails.bedrooms,
+                        bathrooms: homeDetails.bathrooms,
+                        // Recurring booking link
+                        discountPercent: discountType.includes('recurring') ? (discountAmount / baseAmount) : 0,
+                        discountAmount: discountAmount,
+                        hasPets: homeDetails.hasPets,
+                        squareFootage: homeDetails.squareFootage,
+                        specialInstructions: specialInstructions,
+                        basePrice: baseAmount,
+                        subtotal: totalAmount,
+                        addOnsTotal: 0,
+                        stripeFee: stripeFee,
+                        platformReserve: insuranceFee,
+                        totalPrice: totalAmount,
+                        stripePaymentIntentId: paymentIntentIdExtracted,
+                        ...(resolvedAddOns.length > 0 ? {
+                            addOns: {
+                                create: resolvedAddOns.map((ao) => ({
+                                    addOnId: ao.id,
+                                    price: ao.price
+                                }))
+                            }
+                        } : {})
                     }
                 });
-            }
 
-            // Create Booking
-            const newBooking = await tx.booking.create({
-                data: {
-                    userId: userId || 'guest',
-                    serviceTypeId: serviceId,
-                    status: 'PENDING',
-                    addressId: createdAddress?.id,
-                    addressSnapshot: address,
-                    scheduledDate: new Date(schedule.date),
-                    timeWindow: schedule.timeSlot,
-                    estimatedDuration: service.baseTime,
-                    bedrooms: homeDetails.bedrooms,
-                    bathrooms: homeDetails.bathrooms,
-                    // Recurring booking link
-                    recurringId: recurringId || undefined,
-                    discountPercent: discountType.includes('recurring') ? (discountAmount / baseAmount) : 0,
-                    discountAmount: discountAmount,
-                    hasPets: homeDetails.hasPets,
-                    squareFootage: homeDetails.squareFootage,
-                    specialInstructions: specialInstructions,
-                    basePrice: baseAmount,
-                    subtotal: totalAmount,
-                    addOnsTotal: 0,
-                    stripeFee: stripeFee,
-                    platformReserve: insuranceFee,
-                    totalPrice: totalAmount,
-                    stripePaymentIntentId: paymentIntentIdExtracted,
-                    ...(resolvedAddOns.length > 0 ? {
-                        addOns: {
-                            create: resolvedAddOns.map((ao) => ({
-                                addOnId: ao.id,
-                                price: ao.price
-                            }))
-                        }
-                    } : {})
-                }
+                // Create Payment Record
+                await tx.payment.create({
+                    data: {
+                        bookingId: newBooking.id,
+                        amount: totalAmount,
+                        stripeFee: stripeFee,
+                        platformReserve: insuranceFee,
+                        netAmount: netAmount,
+                        stripePaymentIntentId: paymentIntentIdExtracted,
+                        status: 'SUCCEEDED',
+                        paidAt: new Date(),
+                    }
+                });
+
+                return newBooking;
             });
+        } else {
+            console.log(`[Booking Create] Skipping creation for DRAFT booking ${currentBooking?.id} - going straight to matching`);
+        }
 
-            // Create Payment Record
-            await tx.payment.create({
-                data: {
-                    bookingId: newBooking.id,
-                    amount: totalAmount,
-                    stripeFee: stripeFee,
-                    platformReserve: insuranceFee,
-                    netAmount: netAmount,
-                    stripePaymentIntentId: paymentIntentIdExtracted,
-                    status: 'SUCCEEDED',
-                    paidAt: new Date(),
-                }
-            });
-
-            return newBooking;
-        });
+        // Ensure we have a booking to work with
+        if (!booking) {
+            return NextResponse.json({ error: 'Failed to create or update booking' }, { status: 500 });
+        }
 
         // 5. Send Booking Confirmation to Customer
         if (userId && session?.user?.email) {
