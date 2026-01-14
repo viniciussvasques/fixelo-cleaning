@@ -17,9 +17,10 @@ async function acceptBooking(bookingId: string, cleanerId: string) {
         // Create assignment
         await tx.cleanerAssignment.create({
             data: {
-                bookingId,
-                cleanerId,
+                booking: { connect: { id: bookingId } },
+                cleaner: { connect: { id: cleanerId } },
                 status: 'ACCEPTED',
+                expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
             }
         });
 
