@@ -42,21 +42,28 @@ export async function POST(req: Request) {
             where: { stripePaymentIntentId: paymentIntentIdExtracted }
         });
 
+        // Track if this is an update from DRAFT or a new booking
+        let isUpdateFromDraft = false;
+        let currentBooking: typeof existingBooking = null;
+
         if (existingBooking) {
-            // If booking exists but is still DRAFT, update to PENDING (payment was confirmed)
+            // If booking exists but is still DRAFT, update to PENDING and continue to matching
             if (existingBooking.status === 'DRAFT') {
-                const updatedBooking = await prisma.booking.update({
+                await prisma.booking.update({
                     where: { id: existingBooking.id },
                     data: { status: 'PENDING' }
                 });
-                console.log(`[Booking Create] Updated existing booking ${existingBooking.id} from DRAFT to PENDING`);
-                return NextResponse.json({ booking: updatedBooking, message: 'Booking status updated to PENDING' });
+                console.log(`[Booking Create] Updated existing booking ${existingBooking.id} from DRAFT to PENDING - triggering matching...`);
+                isUpdateFromDraft = true;
+                currentBooking = { ...existingBooking, status: 'PENDING' };
+            } else {
+                // Already processed, return existing
+                return NextResponse.json({ booking: existingBooking, message: 'Booking already exists' });
             }
-            return NextResponse.json({ booking: existingBooking, message: 'Booking already exists' });
         }
 
         const service = await prisma.serviceType.findUnique({
-            where: { id: serviceId }
+            where: { id: serviceId || currentBooking?.serviceTypeId }
         });
 
         if (!service) {
