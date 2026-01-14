@@ -14,8 +14,8 @@ import { AddOn } from '@prisma/client';
 import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
 
 const homeDetailsSchema = z.object({
-    bedrooms: z.number().int().min(1).max(6),
-    bathrooms: z.number().int().min(1).max(5),
+    bedrooms: z.number().int().min(1).max(20), // Max validated by Counter with config
+    bathrooms: z.number().int().min(1).max(20), // Max validated by Counter with config
     squareFootage: z.string().transform((val) => val === '' ? undefined : Number(val)).pipe(z.number().int().optional()),
     hasPets: z.boolean(),
 });
