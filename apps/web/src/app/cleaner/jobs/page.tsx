@@ -35,7 +35,7 @@ export default async function JobsPage() {
     const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
     const PROVIDER_SHARE = 1 - platformFeePercent - insuranceFeePercent;
 
-    // Available Jobs (Pending assignments)
+    // Available Jobs (Pending assignments for this cleaner)
     const pendingAssignments = await prisma.cleanerAssignment.findMany({
         where: {
             cleanerId: cleaner.id,
@@ -52,6 +52,23 @@ export default async function JobsPage() {
             }
         },
         orderBy: { booking: { scheduledDate: 'asc' } },
+        take: 20
+    });
+
+    // Also get unassigned bookings (PENDING status with NO assignments at all)
+    // These should be available to ALL active cleaners
+    const unassignedBookings = await prisma.booking.findMany({
+        where: {
+            status: BookingStatus.PENDING,
+            assignments: {
+                none: {} // No assignments at all
+            }
+        },
+        include: {
+            serviceType: true,
+            address: true
+        },
+        orderBy: { scheduledDate: 'asc' },
         take: 20
     });
 
@@ -103,7 +120,7 @@ export default async function JobsPage() {
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide">
                 <div className="flex-shrink-0 bg-green-50 border border-green-100 rounded-xl p-3 min-w-[100px]">
                     <Sparkles className="w-5 h-5 text-green-600 mb-1" />
-                    <p className="text-xl font-bold text-green-700">{pendingAssignments.length}</p>
+                    <p className="text-xl font-bold text-green-700">{pendingAssignments.length + unassignedBookings.length}</p>
                     <p className="text-xs text-green-600">Available</p>
                 </div>
                 <div className="flex-shrink-0 bg-blue-50 border border-blue-100 rounded-xl p-3 min-w-[100px]">
@@ -125,14 +142,14 @@ export default async function JobsPage() {
                         <Sparkles className="w-5 h-5 text-green-600" />
                         New Opportunities
                     </h2>
-                    {pendingAssignments.length > 0 && (
+                    {(pendingAssignments.length + unassignedBookings.length) > 0 && (
                         <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-1 rounded-full animate-pulse">
-                            {pendingAssignments.length} NEW
+                            {pendingAssignments.length + unassignedBookings.length} NEW
                         </span>
                     )}
                 </div>
 
-                {pendingAssignments.length === 0 ? (
+                {(pendingAssignments.length === 0 && unassignedBookings.length === 0) ? (
                     <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Briefcase className="w-8 h-8 text-gray-400" />
@@ -192,8 +209,57 @@ export default async function JobsPage() {
                                 </div>
                             </Link>
                         ))}
+
+                        {/* Unassigned Bookings - Available to all cleaners */}
+                        {unassignedBookings.map(booking => (
+                            <Link key={`unassigned-${booking.id}`} href={`/cleaner/jobs/accept/${booking.id}`}>
+                                <div className="bg-white rounded-2xl p-4 border-l-4 border-l-orange-500 border border-gray-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99]">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                                                    {getDateLabel(booking.scheduledDate)}
+                                                </span>
+                                                <span className="flex items-center gap-1 text-xs text-gray-500">
+                                                    <AlertCircle className="w-3 h-3" />
+                                                    Open to all
+                                                </span>
+                                            </div>
+                                            <h3 className="font-bold text-base">{booking.serviceType.name}</h3>
+                                            <div className="flex items-center text-sm text-gray-500 mt-1">
+                                                <Clock className="w-4 h-4 mr-1" />
+                                                {booking.timeWindow}
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="font-bold text-lg text-green-600">
+                                                {formatCurrency(booking.totalPrice * PROVIDER_SHARE)}
+                                            </p>
+                                            <p className="text-xs text-gray-400">Est. earnings</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                                        <div className="flex items-center text-sm text-gray-600">
+                                            <MapPin className="w-4 h-4 mr-1 text-gray-400" />
+                                            {booking.address?.city || "Location hidden"}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                                            <Home className="w-4 h-4" />
+                                            {booking.bedrooms}BR / {booking.bathrooms}BA
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-3 bg-orange-50 text-orange-700 py-2 px-4 rounded-xl text-center font-medium text-sm">
+                                        Claim This Job
+                                        <ChevronRight className="w-4 h-4 inline ml-1" />
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
                     </div>
                 )}
+
             </section>
 
             {/* My Scheduled Jobs */}
