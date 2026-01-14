@@ -185,7 +185,29 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
                 console.error(`[Webhook] Failed to send job offer notification:`, err);
             }
         } else {
-            console.log(`[Webhook] No matching cleaners found for booking ${booking.id}`);
+            console.log(`[Webhook] No matching cleaners found for booking ${booking.id} - notifying all active cleaners`);
+
+            // Notify ALL active cleaners about the new job opportunity
+            const activeCleaners = await prisma.cleanerProfile.findMany({
+                where: { status: 'ACTIVE' },
+                include: { user: true }
+            });
+
+            if (activeCleaners.length > 0) {
+                // Create in-app notifications for all active cleaners
+                await prisma.notification.createMany({
+                    data: activeCleaners.map(cleaner => ({
+                        userId: cleaner.userId,
+                        type: 'PUSH' as const,
+                        status: 'SENT' as const,
+                        subject: 'New Job Available!',
+                        body: `A new ${booking.serviceType?.name || 'cleaning'} job is available in ${booking.address?.city || 'your area'}. Be the first to claim it!`,
+                        metadata: { bookingId: booking.id, type: 'NEW_JOB' },
+                        sentAt: new Date()
+                    }))
+                });
+                console.log(`[Webhook] Notified ${activeCleaners.length} active cleaners about new job`);
+            }
         }
     } catch (err) {
         console.error(`[Webhook] Matching failed for booking ${booking.id}:`, err);
