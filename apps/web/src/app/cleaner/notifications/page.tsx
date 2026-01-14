@@ -60,6 +60,13 @@ export default function NotificationsPage() {
 
     useEffect(() => {
         fetchNotifications();
+
+        // Polling automático a cada 30 segundos
+        const interval = setInterval(() => {
+            fetchNotifications();
+        }, 30000);
+
+        return () => clearInterval(interval);
     }, [fetchNotifications]);
 
     const markAsRead = async (id: string) => {
@@ -156,8 +163,8 @@ export default function NotificationsPage() {
                         const Content = (
                             <div
                                 className={`bg-white rounded-xl p-4 border transition-all ${notification.read
-                                        ? 'border-gray-100'
-                                        : 'border-green-200 bg-green-50/50 shadow-sm'
+                                    ? 'border-gray-100'
+                                    : 'border-green-200 bg-green-50/50 shadow-sm'
                                     }`}
                                 onClick={() => !notification.read && markAsRead(notification.id)}
                             >

@@ -7,6 +7,7 @@ import {
     MapPin, Clock, Calendar, ChevronRight, Briefcase,
     AlertCircle, Sparkles, CheckCircle, Home, Timer
 } from "lucide-react";
+import { JobsPolling } from "@/components/jobs-polling";
 
 export default async function JobsPage() {
     const session = await auth();
@@ -116,6 +117,9 @@ export default async function JobsPage() {
 
     return (
         <div className="space-y-6">
+            {/* Auto-refresh a cada 30 segundos */}
+            <JobsPolling intervalMs={30000} />
+
             {/* Header Stats */}
             <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 lg:mx-0 lg:px-0 scrollbar-hide">
                 <div className="flex-shrink-0 bg-green-50 border border-green-100 rounded-xl p-3 min-w-[100px]">
