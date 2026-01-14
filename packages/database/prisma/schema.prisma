@@ -57,6 +57,7 @@ enum AssignmentStatus {
   REJECTED     // Cleaner rejected
   EXPIRED      // 15-min timeout
   CANCELLED    // Booking cancelled
+  NO_SHOW      // Cleaner didn't check in on time
 }
 
 enum NotificationType {
@@ -157,6 +158,7 @@ model CleanerProfile {
   jobsCompleted         Int            @default(0)
   jobsCancelled         Int            @default(0)
   cancellationsLast30   Int            @default(0)
+  noShowCount           Int            @default(0)    // Total no-shows (didn't check in)
   
   // Strikes System (for late cancellations)
   strikes               Int            @default(0)    // Max 3 before suspension
