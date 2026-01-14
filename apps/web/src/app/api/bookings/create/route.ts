@@ -55,7 +55,11 @@ export async function POST(req: Request) {
                 });
                 console.log(`[Booking Create] Updated existing booking ${existingBooking.id} from DRAFT to PENDING - triggering matching...`);
                 isUpdateFromDraft = true;
-                currentBooking = { ...existingBooking, status: 'PENDING' };
+                // Refetch the booking with all relations needed for matching
+                currentBooking = await prisma.booking.findUnique({
+                    where: { id: existingBooking.id },
+                    include: { address: true }
+                }) as typeof existingBooking;
             } else {
                 // Already processed, return existing
                 return NextResponse.json({ booking: existingBooking, message: 'Booking already exists' });
