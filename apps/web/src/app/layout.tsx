@@ -29,7 +29,7 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://fixelo.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://fixelo.app'),
   title: {
     default: 'Fixelo - Professional Home Cleaning Services in Orlando',
     template: '%s | Fixelo',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Fixelo - Professional Home Cleaning Services',
     description: 'Book trusted, professional home cleaning services in Orlando, FL. Easy online booking, vetted cleaners.',
-    url: 'https://fixelo.com',
+    url: 'https://fixelo.app',
     siteName: 'Fixelo',
     locale: 'en_US',
     type: 'website',
@@ -98,6 +98,20 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <head>
+        {/* Google Analytics */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-4QPSL99Z6N"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-4QPSL99Z6N');
+            `,
+          }}
+        />
+
+        {/* Structured Data */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
