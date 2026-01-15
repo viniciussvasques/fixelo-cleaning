@@ -7,6 +7,7 @@ import {
     Home,
     Briefcase,
     Calendar,
+    Clock,
     DollarSign,
     User,
     Building,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
     { icon: Home, label: 'Dashboard', href: '/cleaner/dashboard' },
     { icon: Briefcase, label: 'Jobs', href: '/cleaner/jobs', badge: true },
     { icon: Calendar, label: 'Schedule', href: '/cleaner/schedule' },
+    { icon: Clock, label: 'Availability', href: '/cleaner/availability' },
     { icon: DollarSign, label: 'Earnings', href: '/cleaner/earnings' },
     { icon: Bell, label: 'Notifications', href: '/cleaner/notifications' },
 ];
@@ -72,7 +74,7 @@ export function CleanerSidebar() {
             <nav className="flex-1 p-4 overflow-y-auto">
                 <div className="space-y-1">
                     {NAV_ITEMS.map((item) => {
-                        const isActive = pathname === item.href || 
+                        const isActive = pathname === item.href ||
                             (item.href !== '/cleaner/dashboard' && pathname?.startsWith(item.href));
                         return (
                             <Link
