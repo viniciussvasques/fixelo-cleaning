@@ -4,10 +4,11 @@ import { BookingStatus } from "@prisma/client";
 import { notFound } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, Calendar, CheckCircle } from "lucide-react";
+import { MapPin, Clock, Calendar, CheckCircle, Play } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { acceptJob, completeJob } from "../../actions";
 import { ChatInterface } from "@/components/chat/chat-interface";
+import Link from "next/link";
 
 export default async function JobDetailsPage({ params }: { params: { id: string } }) {
     const session = await auth();
@@ -154,11 +155,22 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                                         <ChatInterface bookingId={booking.id} currentUserId={session!.user!.id} />
                                     </div>
 
-                                    {booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS' ? (
-                                        <form action={completeAction} className="mt-4">
-                                            <Button className="w-full bg-blue-600 hover:bg-blue-700">Mark as Completed</Button>
+                                    {(booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') && (
+                                        <Link href={`/cleaner/jobs/${params.id}/execute`} className="block mt-4">
+                                            <Button className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg gap-2">
+                                                <Play className="w-5 h-5" />
+                                                Start Job - Check In
+                                            </Button>
+                                        </Link>
+                                    )}
+
+                                    {booking.status === 'IN_PROGRESS' && (
+                                        <form action={completeAction} className="mt-3">
+                                            <Button className="w-full bg-blue-600 hover:bg-blue-700" variant="outline">
+                                                Mark as Completed (Quick)
+                                            </Button>
                                         </form>
-                                    ) : null}
+                                    )}
 
                                     {booking.status !== 'COMPLETED' && (
                                         <form action={async () => {
