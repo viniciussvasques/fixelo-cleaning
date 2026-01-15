@@ -257,12 +257,21 @@ export default async function CleanerDashboard() {
                                     Call Client
                                 </a>
                             )}
-                            <Link
-                                href={`/cleaner/jobs/${nextJob.id}`}
-                                className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-medium text-sm hover:bg-green-700 transition-colors"
-                            >
-                                View Details
-                            </Link>
+                            {isToday ? (
+                                <Link
+                                    href={`/cleaner/jobs/${nextJob.id}/execute`}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-green-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25"
+                                >
+                                    ▶ Start Job
+                                </Link>
+                            ) : (
+                                <Link
+                                    href={`/cleaner/jobs/${nextJob.id}`}
+                                    className="flex-1 flex items-center justify-center gap-2 bg-gray-800 text-white py-3 rounded-xl font-medium text-sm hover:bg-gray-900 transition-colors"
+                                >
+                                    View Details
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>

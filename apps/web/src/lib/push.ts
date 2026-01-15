@@ -7,15 +7,33 @@
 import webPush from 'web-push';
 import { prisma } from '@fixelo/database';
 
-// VAPID keys should be generated once and stored
-// Generate with: npx web-push generate-vapid-keys
-const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '';
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || '';
-const VAPID_EMAIL = process.env.VAPID_EMAIL || 'mailto:support@fixelo.app';
+// Cache VAPID keys
+let vapidConfigured = false;
+let vapidPublicKey = '';
 
-// Configure web-push
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-    webPush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+async function getVapidKeys() {
+    const [publicKey, privateKey] = await Promise.all([
+        prisma.systemConfig.findUnique({ where: { key: 'vapid_public_key' } }),
+        prisma.systemConfig.findUnique({ where: { key: 'vapid_private_key' } })
+    ]);
+    return {
+        publicKey: publicKey?.value || process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || '',
+        privateKey: privateKey?.value || process.env.VAPID_PRIVATE_KEY || ''
+    };
+}
+
+async function ensureVapidConfigured() {
+    if (vapidConfigured) return true;
+
+    const { publicKey, privateKey } = await getVapidKeys();
+
+    if (publicKey && privateKey) {
+        webPush.setVapidDetails('mailto:support@fixelo.app', publicKey, privateKey);
+        vapidPublicKey = publicKey;
+        vapidConfigured = true;
+        return true;
+    }
+    return false;
 }
 
 export interface PushPayload {
@@ -65,7 +83,8 @@ export async function removePushSubscription(endpoint: string) {
  * Send push notification to a specific user
  */
 export async function sendPushNotification(userId: string, payload: PushPayload) {
-    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    const configured = await ensureVapidConfigured();
+    if (!configured) {
         console.warn('[Push] VAPID keys not configured');
         return { success: false, error: 'VAPID keys not configured' };
     }
@@ -79,7 +98,7 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
     }
 
     const results = await Promise.allSettled(
-        subscriptions.map(async (sub) => {
+        subscriptions.map(async (sub: { endpoint: string; p256dh: string; auth: string }) => {
             const pushSubscription = {
                 endpoint: sub.endpoint,
                 keys: {
@@ -115,7 +134,9 @@ export async function sendPushNotification(userId: string, payload: PushPayload)
         })
     );
 
-    const successful = results.filter(r => r.status === 'fulfilled' && (r.value as any).success).length;
+    const successful = results.filter((r): r is PromiseFulfilledResult<{ success: boolean; endpoint: string }> =>
+        r.status === 'fulfilled' && r.value.success
+    ).length;
     return { success: successful > 0, sent: successful, total: subscriptions.length };
 }
 
@@ -176,6 +197,9 @@ export async function notifyCustomerJobComplete(customerUserId: string, bookingI
 /**
  * Get VAPID public key for client subscription
  */
-export function getVapidPublicKey() {
-    return VAPID_PUBLIC_KEY;
+export async function getVapidPublicKey() {
+    if (vapidPublicKey) return vapidPublicKey;
+
+    const { publicKey } = await getVapidKeys();
+    return publicKey;
 }
