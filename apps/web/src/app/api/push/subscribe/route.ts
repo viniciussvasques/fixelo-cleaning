@@ -1,87 +1,85 @@
 /**
- * Push Subscription API
+ * Push Notifications Subscription API
  * 
- * Register and manage push notification subscriptions.
+ * Handles saving and removing push subscriptions
  */
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import {
-    getVapidPublicKey,
-    isPushConfigured,
-    storeSubscription,
-    removeSubscription
-} from '@/lib/push-notifications';
+import { savePushSubscription, removePushSubscription, getVapidPublicKey } from '@/lib/push';
 
 /**
- * GET - Get VAPID public key for subscription
+ * GET - Get VAPID public key
  */
 export async function GET() {
-    if (!isPushConfigured()) {
+    const publicKey = getVapidPublicKey();
+
+    if (!publicKey) {
         return NextResponse.json(
-            { configured: false, message: 'Push notifications not configured' },
-            { status: 200 }
+            { error: 'Push notifications not configured' },
+            { status: 503 }
         );
     }
 
-    return NextResponse.json({
-        configured: true,
-        publicKey: getVapidPublicKey(),
-    });
+    return NextResponse.json({ publicKey });
 }
 
 /**
- * POST - Save push subscription
+ * POST - Subscribe to push notifications
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
         const session = await auth();
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const body = await request.json();
-        const { subscription } = body;
+        const subscription = await request.json();
 
-        if (!subscription || !subscription.endpoint) {
+        if (!subscription.endpoint || !subscription.keys?.p256dh || !subscription.keys?.auth) {
             return NextResponse.json(
-                { error: 'Invalid subscription' },
+                { error: 'Invalid subscription data' },
                 { status: 400 }
             );
         }
 
-        await storeSubscription(
-            session.user.id,
-            subscription
-        );
+        await savePushSubscription(session.user.id, subscription);
 
-        return NextResponse.json({ success: true });
+        return NextResponse.json({ success: true, message: 'Subscribed to push notifications' });
+
     } catch (error) {
-        console.error('[Push] Error saving subscription:', error);
+        console.error('[Push] Subscribe error:', error);
         return NextResponse.json(
-            { error: 'Failed to save subscription' },
+            { error: 'Failed to subscribe' },
             { status: 500 }
         );
     }
 }
 
 /**
- * DELETE - Remove push subscription
+ * DELETE - Unsubscribe from push notifications
  */
-export async function DELETE(request: Request) {
+export async function DELETE(request: NextRequest) {
     try {
         const session = await auth();
         if (!session?.user?.id) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        await removeSubscription(session.user.id);
+        const { endpoint } = await request.json();
 
-        return NextResponse.json({ success: true });
+        if (!endpoint) {
+            return NextResponse.json({ error: 'Endpoint required' }, { status: 400 });
+        }
+
+        await removePushSubscription(endpoint);
+
+        return NextResponse.json({ success: true, message: 'Unsubscribed from push notifications' });
+
     } catch (error) {
-        console.error('[Push] Error removing subscription:', error);
+        console.error('[Push] Unsubscribe error:', error);
         return NextResponse.json(
-            { error: 'Failed to remove subscription' },
+            { error: 'Failed to unsubscribe' },
             { status: 500 }
         );
     }
