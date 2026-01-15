@@ -2,15 +2,48 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { Sparkles, Shield, Star, ArrowRight, CheckCircle, Zap, Calendar } from 'lucide-react';
+import { Sparkles, Shield, Star, ArrowRight, CheckCircle, Zap, Calendar, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
+interface ServiceType {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  basePrice: number;
+  inclusions: string[];
+}
 
 export default function HomePage() {
   const [isVisible, setIsVisible] = useState(false);
+  const [services, setServices] = useState<ServiceType[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setIsVisible(true);
+    fetchServices();
   }, []);
+
+  const fetchServices = async () => {
+    try {
+      const res = await fetch('/api/service-types');
+      const data = await res.json();
+      setServices(data.serviceTypes || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get service by slug, with fallback
+  const getService = (slug: string) => {
+    return services.find(s => s.slug === slug) || null;
+  };
+
+  const standardService = getService('standard');
+  const deepService = getService('deep');
+  const airbnbService = getService('airbnb');
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -161,7 +194,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services */}
+      {/* Services - Dynamic from Database */}
       <section id="services" className="py-16 sm:py-20 lg:py-24 bg-gradient-to-b from-slate-50 to-white">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="text-center mb-12 sm:mb-16">
@@ -171,82 +204,119 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
-            {/* Standard Cleaning */}
-            <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-              <div className="text-xs font-semibold text-emerald-600 mb-2 uppercase tracking-wide">Most Affordable</div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-3">Standard Cleaning</h3>
-              <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-4xl sm:text-5xl font-bold">$109</span>
-                <span className="text-slate-500">starting</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-grow">
-                {['Dusting & Vacuuming', 'Mopping All Floors', 'Bathroom Sanitizing', 'Kitchen Surfaces', 'Trash Removal'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-700">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/book?service=standard"
-                className="w-full py-3.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-semibold transition-all duration-300 text-center border-2 border-transparent hover:border-slate-300"
-              >
-                Book Standard
-              </Link>
+          {loading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
             </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto">
+              {/* Standard Cleaning */}
+              {standardService && (
+                <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                  <div className="text-xs font-semibold text-emerald-600 mb-2 uppercase tracking-wide">Most Affordable</div>
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-3">{standardService.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-4xl sm:text-5xl font-bold">${standardService.basePrice}</span>
+                    <span className="text-slate-500">starting</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-grow">
+                    {standardService.inclusions.slice(0, 5).map((item, i) => (
+                      <li key={i} className="flex items-center gap-3 text-slate-700">
+                        <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/book/details?serviceId=${standardService.id}`}
+                    className="w-full py-3.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-semibold transition-all duration-300 text-center border-2 border-transparent hover:border-slate-300"
+                  >
+                    Book {standardService.name}
+                  </Link>
+                </div>
+              )}
 
-            {/* Deep Cleaning */}
-            <div className="relative group bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 sm:p-8 flex flex-col shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 border-2 border-blue-500">
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg">
-                Most Popular
-              </div>
-              <div className="text-xs font-semibold text-blue-100 mb-2 uppercase tracking-wide">Best Value</div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-3">Deep Cleaning</h3>
-              <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-4xl sm:text-5xl font-bold">$169</span>
-                <span className="text-blue-100">starting</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-grow">
-                {['Everything in Standard', 'Inside Oven Cleaning', 'Inside Fridge Cleaning', 'Baseboards & Blinds', 'Cabinet Exteriors'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3">
-                    <CheckCircle className="w-5 h-5 text-blue-100 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/book?service=deep"
-                className="w-full py-3.5 px-6 bg-white hover:bg-blue-50 text-blue-700 rounded-xl font-semibold transition-all duration-300 text-center shadow-lg"
-              >
-                Book Deep Clean
-              </Link>
-            </div>
+              {/* Deep Cleaning */}
+              {deepService && (
+                <div className="relative group bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-2xl p-6 sm:p-8 flex flex-col shadow-xl shadow-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/40 transition-all duration-300 hover:-translate-y-1 border-2 border-blue-500">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-5 py-1.5 rounded-full text-sm font-bold shadow-lg">
+                    Most Popular
+                  </div>
+                  <div className="text-xs font-semibold text-blue-100 mb-2 uppercase tracking-wide">Best Value</div>
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-3">{deepService.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-4xl sm:text-5xl font-bold">${deepService.basePrice}</span>
+                    <span className="text-blue-100">starting</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-grow">
+                    {deepService.inclusions.slice(0, 5).map((item, i) => (
+                      <li key={i} className="flex items-center gap-3">
+                        <CheckCircle className="w-5 h-5 text-blue-100 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/book/details?serviceId=${deepService.id}`}
+                    className="w-full py-3.5 px-6 bg-white hover:bg-blue-50 text-blue-700 rounded-xl font-semibold transition-all duration-300 text-center shadow-lg"
+                  >
+                    Book {deepService.name}
+                  </Link>
+                </div>
+              )}
 
-            {/* Airbnb Cleaning */}
-            <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-              <div className="text-xs font-semibold text-orange-600 mb-2 uppercase tracking-wide">For Hosts</div>
-              <h3 className="text-2xl sm:text-3xl font-bold mb-3">Airbnb Turnover</h3>
-              <div className="flex items-baseline gap-2 mb-6">
-                <span className="text-4xl sm:text-5xl font-bold">$129</span>
-                <span className="text-slate-500">starting</span>
-              </div>
-              <ul className="space-y-3 mb-8 flex-grow">
-                {['Full Turnover Clean', 'Fresh Linens Setup', 'Bathroom Reset', 'Kitchen Reset', 'Guest-Ready Inspection'].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-700">
-                    <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/book?service=airbnb"
-                className="w-full py-3.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-semibold transition-all duration-300 text-center border-2 border-transparent hover:border-slate-300"
-              >
-                Book Turnover
-              </Link>
+              {/* Airbnb Cleaning */}
+              {airbnbService && (
+                <div className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                  <div className="text-xs font-semibold text-orange-600 mb-2 uppercase tracking-wide">For Hosts</div>
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-3">{airbnbService.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-4xl sm:text-5xl font-bold">${airbnbService.basePrice}</span>
+                    <span className="text-slate-500">starting</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-grow">
+                    {airbnbService.inclusions.slice(0, 5).map((item, i) => (
+                      <li key={i} className="flex items-center gap-3 text-slate-700">
+                        <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/book/details?serviceId=${airbnbService.id}`}
+                    className="w-full py-3.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-semibold transition-all duration-300 text-center border-2 border-transparent hover:border-slate-300"
+                  >
+                    Book {airbnbService.name}
+                  </Link>
+                </div>
+              )}
+
+              {/* Show all other services if they exist */}
+              {services.filter(s => !['standard', 'deep', 'airbnb'].includes(s.slug)).map(service => (
+                <div key={service.id} className="group bg-white border-2 border-slate-100 hover:border-blue-200 rounded-2xl p-6 sm:p-8 flex flex-col transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+                  <h3 className="text-2xl sm:text-3xl font-bold mb-3">{service.name}</h3>
+                  <div className="flex items-baseline gap-2 mb-6">
+                    <span className="text-4xl sm:text-5xl font-bold">${service.basePrice}</span>
+                    <span className="text-slate-500">starting</span>
+                  </div>
+                  <ul className="space-y-3 mb-8 flex-grow">
+                    {service.inclusions.slice(0, 5).map((item, i) => (
+                      <li key={i} className="flex items-center gap-3 text-slate-700">
+                        <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={`/book/details?serviceId=${service.id}`}
+                    className="w-full py-3.5 px-6 bg-slate-100 hover:bg-slate-200 text-slate-900 rounded-xl font-semibold transition-all duration-300 text-center"
+                  >
+                    Book {service.name}
+                  </Link>
+                </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -284,9 +354,9 @@ export default function HomePage() {
             <div>
               <h4 className="font-semibold mb-4">Services</h4>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li><Link href="/book?service=standard" className="hover:text-white transition-colors">Standard Cleaning</Link></li>
-                <li><Link href="/book?service=deep" className="hover:text-white transition-colors">Deep Cleaning</Link></li>
-                <li><Link href="/book?service=airbnb" className="hover:text-white transition-colors">Airbnb Turnover</Link></li>
+                <li><Link href="/book" className="hover:text-white transition-colors">Standard Cleaning</Link></li>
+                <li><Link href="/book" className="hover:text-white transition-colors">Deep Cleaning</Link></li>
+                <li><Link href="/book" className="hover:text-white transition-colors">Airbnb Turnover</Link></li>
               </ul>
             </div>
             <div>
@@ -306,7 +376,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            © 2025 Fixelo. All rights reserved.
+            © {new Date().getFullYear()} Fixelo. All rights reserved.
           </div>
         </div>
       </footer>
