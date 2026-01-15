@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Mail, Phone, Clock, MapPin, Send } from 'lucide-react';
+import { ArrowLeft, Mail, Clock, MapPin, Send, HelpCircle } from 'lucide-react';
 import { useState } from 'react';
 
 export default function ContactPage() {
@@ -80,22 +80,8 @@ export default function ContactPage() {
                                 </div>
                                 <div>
                                     <h3 className="font-semibold">Email Us</h3>
-                                    <a href="mailto:support@fixelo.com" className="text-blue-600 hover:underline">
-                                        support@fixelo.com
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl p-6 border border-slate-200">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 bg-green-100 text-green-600 rounded-xl flex items-center justify-center">
-                                    <Phone className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h3 className="font-semibold">Call Us</h3>
-                                    <a href="tel:+14075551234" className="text-blue-600 hover:underline">
-                                        (407) 555-1234
+                                    <a href="mailto:support@fixelo.app" className="text-blue-600 hover:underline">
+                                        support@fixelo.app
                                     </a>
                                 </div>
                             </div>

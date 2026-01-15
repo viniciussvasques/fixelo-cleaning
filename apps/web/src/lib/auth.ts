@@ -16,7 +16,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             async authorize(credentials) {
                 console.log('[AUTH] Authorize called with email:', credentials?.email);
 
-                if (!credentials?.email || !credentials?.password) {
+                const typedCredentials = credentials as { email?: string; password?: string } | undefined;
+
+                if (!typedCredentials?.email || !typedCredentials?.password) {
                     console.log('[AUTH] Missing credentials');
                     return null;
                 }
@@ -24,7 +26,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 // Using pure Prisma call here is fine as this file is Node-only
                 try {
                     const user = await prisma.user.findUnique({
-                        where: { email: credentials.email as string },
+                        where: { email: typedCredentials.email as string },
                         select: {
                             id: true,
                             email: true,
@@ -44,14 +46,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     }
 
                     console.log('[AUTH] Comparing password...');
-                    const isPasswordValid = await compare(
-                        credentials.password as string,
-                        user.passwordHash
-                    );
+                    console.log('[AUTH] Password length:', typedCredentials.password?.length ?? 0);
+                    console.log('[AUTH] Hash length:', user.passwordHash?.length ?? 0);
+                    console.log('[AUTH] Hash starts with:', user.passwordHash?.substring(0, 10));
 
-                    console.log('[AUTH] Password valid:', isPasswordValid);
 
-                    if (!isPasswordValid) return null;
+                    let isPasswordValid = false;
+                    try {
+                        isPasswordValid = await compare(
+                            typedCredentials.password as string,
+                            user.passwordHash
+                        );
+                        console.log('[AUTH] Password valid:', isPasswordValid);
+                    } catch (compareError) {
+                        console.error('[AUTH] Error during password compare:', compareError);
+                        return null;
+                    }
+
+                    if (!isPasswordValid) {
+                        console.log('[AUTH] Password validation failed, returning null');
+                        return null;
+                    }
 
                     console.log('[AUTH] Login successful for:', user.email);
                     return {

@@ -102,12 +102,31 @@ export function clearEmailConfigCache(): void {
   emailConfigCacheTimestamp = 0;
 }
 
+/**
+ * Strips HTML tags and extracts plain text for notifications
+ */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>.*?<\/style>/gi, '')
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .trim()
+    .substring(0, 500); // Limit notification body length
+}
+
 export interface EmailOptions {
   to: string;
   subject: string;
   html?: string;
   text?: string;
   from?: string;
+  notificationText?: string; // Plain text for notification display (optional)
 }
 
 /**
@@ -151,7 +170,7 @@ export async function sendEmailNotification(
         userId,
         type: 'EMAIL',
         subject: options.subject,
-        body: options.html || options.text || '',
+        body: options.notificationText || options.text || (options.html ? stripHtml(options.html) : ''),
         status: 'SENT',
         sentAt: new Date(),
         metadata: (metadata || {}) as Prisma.InputJsonValue,
@@ -166,7 +185,7 @@ export async function sendEmailNotification(
           userId,
           type: 'EMAIL',
           subject: options.subject,
-          body: options.html || options.text || '',
+          body: options.notificationText || options.text || (options.html ? stripHtml(options.html) : ''),
           status: 'FAILED',
           failedAt: new Date(),
           errorMessage: error instanceof Error ? error.message : 'Unknown error',
