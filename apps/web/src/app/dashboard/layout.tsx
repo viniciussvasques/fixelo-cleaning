@@ -2,7 +2,7 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Home, Calendar, User, Settings, LogOut, Menu } from 'lucide-react';
+import { Home, Calendar, User, Settings, LogOut, Menu, MessageCircle, LifeBuoy, CreditCard } from 'lucide-react';
 
 export default async function DashboardLayout({
     children,
@@ -18,6 +18,9 @@ export default async function DashboardLayout({
     const navigation = [
         { name: 'Dashboard', href: '/dashboard', icon: Home },
         { name: 'My Bookings', href: '/dashboard/bookings', icon: Calendar },
+        { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
+        { name: 'Payments', href: '/dashboard/payments', icon: CreditCard },
+        { name: 'Support', href: '/dashboard/support', icon: LifeBuoy },
         { name: 'Profile', href: '/dashboard/profile', icon: User },
         { name: 'Settings', href: '/dashboard/settings', icon: Settings },
     ];
