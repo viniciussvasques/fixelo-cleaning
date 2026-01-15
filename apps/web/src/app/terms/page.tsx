@@ -28,7 +28,7 @@ export default function TermsPage() {
                 <div className="container mx-auto px-4">
                     <h1 className="text-4xl md:text-5xl font-bold mb-4">Terms of Service</h1>
                     <p className="text-xl text-slate-300">
-                        Last updated: January 7, 2026
+                        Last updated: January 15, 2026
                     </p>
                 </div>
             </section>
@@ -180,15 +180,15 @@ export default function TermsPage() {
                             If you have any questions about these Terms, please contact us at:
                         </p>
                         <p>
-                            <strong>Email:</strong> legal@fixelo.com<br />
-                            <strong>Mail:</strong> Fixelo Legal Department, Orlando, FL
+                            <strong>Email:</strong> <a href="mailto:legal@fixelo.app" className="text-blue-600">legal@fixelo.app</a><br />
+                            <strong>Mail:</strong> Fixelo Legal Team, Orlando, FL 32801<br />
+                            <strong>Website:</strong> <a href="https://fixelo.app" className="text-blue-600">https://fixelo.app</a>
                         </p>
 
                         <div className="bg-blue-50 border-l-4 border-blue-600 p-6 mt-8">
                             <p className="text-sm text-blue-900 mb-0">
-                                <strong>Note:</strong> This is a template Terms of Service. Please consult with a
-                                legal professional to ensure compliance with all applicable laws and regulations
-                                before using in production.
+                                <strong>Questions?</strong> If you have any questions about these Terms of Service,
+                                please contact us at <a href="mailto:legal@fixelo.app" className="text-blue-600 underline">legal@fixelo.app</a>
                             </p>
                         </div>
                     </div>

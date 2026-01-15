@@ -33,7 +33,7 @@ export default function PrivacyPage() {
                         <div>
                             <h1 className="text-4xl md:text-5xl font-bold">Privacy Policy</h1>
                             <p className="text-xl text-green-100 mt-2">
-                                Last updated: January 7, 2026
+                                Last updated: January 15, 2026
                             </p>
                         </div>
                     </div>
@@ -228,16 +228,16 @@ export default function PrivacyPage() {
                             please contact us:
                         </p>
                         <p>
-                            <strong>Email:</strong> privacy@fixelo.com<br />
-                            <strong>Mail:</strong> Fixelo Privacy Team, Orlando, FL<br />
-                            <strong>Phone:</strong> (407) 555-1234
+                            <strong>Email:</strong> <a href="mailto:privacy@fixelo.app" className="text-blue-600">privacy@fixelo.app</a><br />
+                            <strong>Mail:</strong> Fixelo Privacy Team, Orlando, FL 32801<br />
+                            <strong>Website:</strong> <a href="https://fixelo.app" className="text-blue-600">https://fixelo.app</a>
                         </p>
 
-                        <div className="bg-yellow-50 border-l-4 border-yellow-600 p-6 mt-8">
-                            <p className="text-sm text-yellow-900 mb-0">
-                                <strong>⚠️ Legal Notice:</strong> This is a template Privacy Policy. Please consult
-                                with a privacy attorney to ensure full compliance with GDPR, CCPA, and other applicable
-                                data protection regulations before using in production.
+                        <div className="bg-green-50 border-l-4 border-green-600 p-6 mt-8">
+                            <p className="text-sm text-green-900 mb-0">
+                                <strong>🔒 Your Privacy Matters:</strong> We are committed to protecting your personal
+                                information. If you have any concerns about your data, please don't hesitate to
+                                contact us at <a href="mailto:privacy@fixelo.app" className="text-green-700 underline">privacy@fixelo.app</a>
                             </p>
                         </div>
                     </div>
