@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Briefcase } from 'lucide-react';
+import { signIn } from 'next-auth/react';
 
 const signupSchema = z.object({
     firstName: z.string().min(1, 'First name is required'),
@@ -69,15 +70,25 @@ function SignUpPageContent() {
                 throw new Error(result.error || 'Signup failed');
             }
 
-            // Redirect based on role and callbackUrl
+            // Auto-login after successful signup
+            const signInResult = await signIn('credentials', {
+                email: data.email,
+                password: data.password,
+                redirect: false,
+            });
+
+            if (signInResult?.error) {
+                // Fallback to signin page if auto-login fails
+                router.push('/auth/signin?message=Account created! Please sign in.');
+                return;
+            }
+
+            // Redirect based on role
             if (data.role === 'CLEANER') {
-                // For cleaners, redirect to signin with callbackUrl to onboarding
-                const onboardingCallback = callbackUrl || '/cleaner/onboarding';
-                router.push(`/auth/signin?message=Account created! Please sign in to complete your professional profile.&callbackUrl=${encodeURIComponent(onboardingCallback)}`);
+                router.push('/cleaner/onboarding');
             } else {
                 // For customers, use the callbackUrl if provided
-                const customerCallback = callbackUrl ? `&callbackUrl=${encodeURIComponent(callbackUrl)}` : '';
-                router.push(`/auth/signin?message=Account created successfully. Please sign in.${customerCallback}`);
+                router.push(callbackUrl || '/dashboard');
             }
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An error occurred');
