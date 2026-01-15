@@ -45,7 +45,13 @@ export async function GET(request: NextRequest) {
 
         const where: any = { userId: session.user.id };
         if (status) {
-            where.status = status as TicketStatus;
+            // Support multiple status values separated by comma
+            const statusArray = status.split(',').map(s => s.trim()).filter(s => s);
+            if (statusArray.length === 1) {
+                where.status = statusArray[0] as TicketStatus;
+            } else if (statusArray.length > 1) {
+                where.status = { in: statusArray as TicketStatus[] };
+            }
         }
 
         const [tickets, total] = await Promise.all([
@@ -76,8 +82,8 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('[Support] GET error:', error);
-        return NextResponse.json({ 
-            error: 'Failed to fetch tickets' 
+        return NextResponse.json({
+            error: 'Failed to fetch tickets'
         }, { status: 500 });
     }
 }
@@ -167,14 +173,14 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         if (error instanceof z.ZodError) {
-            return NextResponse.json({ 
-                error: 'Validation error', 
-                details: error.issues 
+            return NextResponse.json({
+                error: 'Validation error',
+                details: error.issues
             }, { status: 400 });
         }
         console.error('[Support] POST error:', error);
-        return NextResponse.json({ 
-            error: error instanceof Error ? error.message : 'Failed to create ticket' 
+        return NextResponse.json({
+            error: error instanceof Error ? error.message : 'Failed to create ticket'
         }, { status: 500 });
     }
 }
