@@ -4,7 +4,13 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from 'sonner';
 import { generateOrganizationSchema, generateLocalBusinessSchema } from '@/components/seo/MetaTags';
-import { PushNotificationPrompt } from '@/components/push-notification-prompt';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to avoid SSR issues with useSession
+const PushNotificationPrompt = dynamic(
+  () => import('@/components/push-notification-prompt').then(mod => mod.PushNotificationPrompt),
+  { ssr: false }
+);
 
 export const viewport: Viewport = {
   themeColor: [
