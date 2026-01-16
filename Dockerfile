@@ -80,6 +80,10 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy database dependencies for seed (tsx, bcryptjs)
 COPY --from=builder /app/packages/database/node_modules ./packages/database/node_modules
 
+# Copy entrypoint script
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x ./entrypoint.sh
+
 # Set ownership
 RUN chown -R nextjs:nodejs /app
 
@@ -93,5 +97,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1
 
-# Start the application
-CMD ["node", "apps/web/server.js"]
+# Start the application with migration
+ENTRYPOINT ["./entrypoint.sh"]
+
