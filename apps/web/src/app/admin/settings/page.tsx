@@ -14,8 +14,16 @@ export default async function SettingsPage() {
         }
     });
 
-    const getVal = (key: string, def: string) =>
-        configs.find(c => c.key === key)?.value || def;
+    const getVal = (key: string, def: string) => {
+        const config = configs.find(c => c.key === key);
+        if (!config) return def;
+        // For commission, convert from decimal (0.15) to percentage (15)
+        if (key === 'platform_commission') {
+            const decimal = parseFloat(config.value);
+            return (decimal * 100).toString();
+        }
+        return config.value;
+    };
 
     return (
         <div className="space-y-6">

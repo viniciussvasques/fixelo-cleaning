@@ -16,13 +16,28 @@ export async function updateSystemConfig(formData: FormData) {
     const maxBathrooms = formData.get("maxBathrooms");
 
     if (platformFee) {
-        // Here we could update FinancialSettings or SystemConfig depending on architecture
-        // For simplicity, let's upsert SystemConfig keys
+        const feeValue = parseFloat(platformFee.toString().replace(',', '.'));
+        const feePercent = feeValue / 100; // Convert from percentage to decimal (e.g., 15 -> 0.15)
+
+        // Update SystemConfig
         await prisma.systemConfig.upsert({
             where: { key: 'platform_commission' },
-            create: { key: 'platform_commission', value: platformFee.toString() },
-            update: { value: platformFee.toString() }
+            create: { key: 'platform_commission', value: feePercent.toString() },
+            update: { value: feePercent.toString() }
         });
+
+        // ALSO update FinancialSettings to keep in sync
+        const existing = await prisma.financialSettings.findFirst();
+        if (existing) {
+            await prisma.financialSettings.update({
+                where: { id: existing.id },
+                data: { platformFeePercent: feePercent }
+            });
+        } else {
+            await prisma.financialSettings.create({
+                data: { platformFeePercent: feePercent }
+            });
+        }
     }
 
     if (maxBedrooms) {
@@ -42,4 +57,5 @@ export async function updateSystemConfig(formData: FormData) {
     }
 
     revalidatePath("/admin/settings");
+    revalidatePath("/admin");
 }
