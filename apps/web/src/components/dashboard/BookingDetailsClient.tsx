@@ -12,15 +12,17 @@ interface BookingDetailsClientProps {
     status: string;
     cleanerName?: string;
     scheduledDate?: Date;
+    completedAt?: Date | null;
     totalPrice?: number;
     tipAmount?: number;
 }
 
-export default function BookingDetailsClient({ 
-    bookingId, 
+export default function BookingDetailsClient({
+    bookingId,
     status,
     cleanerName = 'Your Cleaner',
     scheduledDate = new Date(),
+    completedAt,
     totalPrice = 0,
     tipAmount = 0,
 }: BookingDetailsClientProps) {
@@ -32,7 +34,19 @@ export default function BookingDetailsClient({
     const canCancel = !['COMPLETED', 'CANCELLED', 'REFUNDED'].includes(status);
     const isCompleted = status === 'COMPLETED';
     const canTip = isCompleted && tipAmount === 0;
-    const canReportIssue = isCompleted;
+
+    // Calcular horas restantes para reportar (48h após conclusão)
+    const calculateHoursRemaining = () => {
+        if (!completedAt) return 48;
+        const completedDate = new Date(completedAt);
+        const deadline = new Date(completedDate.getTime() + 48 * 60 * 60 * 1000);
+        const now = new Date();
+        const hoursLeft = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+        return Math.max(0, hoursLeft);
+    };
+
+    const hoursRemaining = calculateHoursRemaining();
+    const canReportIssue = isCompleted && hoursRemaining > 0;
 
     const handleSuccess = () => {
         router.refresh();
@@ -105,6 +119,7 @@ export default function BookingDetailsClient({
                 isOpen={showQualityModal}
                 onClose={() => setShowQualityModal(false)}
                 bookingId={bookingId}
+                hoursRemaining={hoursRemaining}
                 onSuccess={handleSuccess}
             />
 

@@ -24,6 +24,9 @@ export default async function BookingDetailsPage({ params }: Props) {
       serviceType: true,
       address: true,
       review: true,
+      jobExecution: {
+        select: { completedAt: true }
+      },
       addOns: {
         include: {
           addOn: true,
@@ -245,11 +248,12 @@ export default async function BookingDetailsPage({ params }: Props) {
           </div>
 
           {/* Actions - usando componente client para funcionalidade */}
-          <BookingDetailsClient 
-            bookingId={booking.id} 
+          <BookingDetailsClient
+            bookingId={booking.id}
             status={booking.status}
             cleanerName={assignment?.cleaner?.user?.firstName || 'Your Cleaner'}
             scheduledDate={booking.scheduledDate}
+            completedAt={booking.jobExecution?.completedAt}
             totalPrice={booking.totalPrice}
             tipAmount={(booking as any).tipAmount || 0}
           />

@@ -35,16 +35,18 @@ interface DialogContentProps {
 export function DialogContent({ children, className = '' }: DialogContentProps) {
     return (
         <div
-            className={`relative bg-white rounded-xl shadow-xl max-h-[90vh] overflow-auto animate-fade-in ${className}`}
+            className={`relative bg-white rounded-xl shadow-xl w-full max-w-md mx-auto max-h-[90vh] overflow-auto animate-fade-in ${className}`}
             onClick={(e) => e.stopPropagation()}
         >
-            {children}
+            <div className="p-6">
+                {children}
+            </div>
         </div>
     );
 }
 
 export function DialogHeader({ children }: { children: React.ReactNode }) {
-    return <div className="p-6 pb-0">{children}</div>;
+    return <div className="mb-4">{children}</div>;
 }
 
 export function DialogTitle({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -56,7 +58,7 @@ export function DialogDescription({ children, className }: { children: React.Rea
 }
 
 export function DialogFooter({ children, className }: { children: React.ReactNode; className?: string }) {
-    return <div className={`flex justify-end gap-3 p-6 pt-4 ${className || ''}`}>{children}</div>;
+    return <div className={`flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100 ${className || ''}`}>{children}</div>;
 }
 
 export function DialogClose({ onClick }: { onClick: () => void }) {
