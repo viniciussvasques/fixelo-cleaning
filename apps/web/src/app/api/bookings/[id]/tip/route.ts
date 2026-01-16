@@ -73,29 +73,63 @@ export async function POST(
         // Process tip payment via Stripe
         const stripe = await getStripeClient();
 
-        // Create a payment intent for the tip
-        const customer = await prisma.user.findUnique({
+        // Get or create Stripe customer for this user
+        let customer = await prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { stripeCustomerId: true }
+            select: { id: true, email: true, firstName: true, stripeCustomerId: true }
         });
 
-        if (!customer?.stripeCustomerId) {
-            return NextResponse.json({ error: 'Please add a payment method first' }, { status: 400 });
+        let stripeCustomerId = customer?.stripeCustomerId;
+
+        // If no customer exists, create one in Stripe
+        if (!stripeCustomerId && customer) {
+            const stripeCustomer = await stripe.customers.create({
+                email: customer.email,
+                name: customer.firstName || undefined,
+                metadata: {
+                    userId: customer.id
+                }
+            });
+            stripeCustomerId = stripeCustomer.id;
+
+            // Save the customer ID
+            await prisma.user.update({
+                where: { id: session.user.id },
+                data: { stripeCustomerId }
+            });
         }
 
-        // Create transfer directly to cleaner (100% goes to cleaner)
-        const transfer = await stripe.transfers.create({
+        // Create a PaymentIntent for the tip that transfers directly to cleaner
+        const paymentIntent = await stripe.paymentIntents.create({
             amount: Math.round(amount * 100), // cents
             currency: 'usd',
-            destination: cleaner.stripeAccountId,
-            description: `Tip from booking ${booking.id}`,
+            customer: stripeCustomerId || undefined,
+            automatic_payment_methods: {
+                enabled: true,
+            },
+            transfer_data: {
+                destination: cleaner.stripeAccountId,
+            },
             metadata: {
                 bookingId: booking.id,
                 type: 'tip',
                 customerId: session.user.id,
                 cleanerId: cleaner.id
-            }
+            },
+            description: `Tip for booking ${booking.id}`,
         });
+
+        // Return client secret for frontend to complete payment
+        if (paymentIntent.status !== 'succeeded') {
+            return NextResponse.json({
+                requiresPayment: true,
+                clientSecret: paymentIntent.client_secret,
+                amount: amount,
+                message: 'Complete payment to send tip'
+            });
+        }
+
+        // If payment succeeded immediately (saved card), update booking
 
         // Update booking with tip
         await prisma.booking.update({
@@ -108,7 +142,7 @@ export async function POST(
 
         // Notify cleaner about the tip
         const cleanerUser = cleaner.user;
-        
+
         // SMS
         if (cleanerUser.phone) {
             try {
@@ -143,7 +177,7 @@ export async function POST(
         return NextResponse.json({
             success: true,
             message: `$${amount.toFixed(2)} tip sent to ${cleanerUser.firstName}!`,
-            transferId: transfer.id
+            paymentIntentId: paymentIntent.id
         });
 
     } catch (error) {
