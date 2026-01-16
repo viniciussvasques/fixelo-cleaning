@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: Props) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const bookingId = params.id;
+        const id = params.id;
 
         // Verify cleaner is assigned to this job
         const cleaner = await prisma.cleanerProfile.findUnique({
@@ -35,6 +35,25 @@ export async function GET(request: NextRequest, { params }: Props) {
 
         if (!cleaner) {
             return NextResponse.json({ error: 'Cleaner profile not found' }, { status: 404 });
+        }
+
+        // Try to find by assignmentId first (from dashboard link), then bookingId
+        let bookingId: string;
+
+        const assignment = await prisma.cleanerAssignment.findUnique({
+            where: { id },
+            select: { bookingId: true, cleanerId: true }
+        });
+
+        if (assignment) {
+            // ID is assignmentId
+            if (assignment.cleanerId !== cleaner.id) {
+                return NextResponse.json({ error: 'Not authorized for this job' }, { status: 403 });
+            }
+            bookingId = assignment.bookingId;
+        } else {
+            // ID might be bookingId directly
+            bookingId = id;
         }
 
         // Get job execution with all related data
@@ -143,8 +162,8 @@ export async function GET(request: NextRequest, { params }: Props) {
 
     } catch (error) {
         console.error('[JobExecution] GET error:', error);
-        return NextResponse.json({ 
-            error: error instanceof Error ? error.message : 'Failed to fetch job execution' 
+        return NextResponse.json({
+            error: error instanceof Error ? error.message : 'Failed to fetch job execution'
         }, { status: 500 });
     }
 }
@@ -159,7 +178,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const bookingId = params.id;
+        const id = params.id;
         const body = await request.json();
         const { action, latitude, longitude } = body;
 
@@ -170,6 +189,23 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
         if (!cleaner) {
             return NextResponse.json({ error: 'Cleaner profile not found' }, { status: 404 });
+        }
+
+        // Try to find by assignmentId first (from dashboard link), then bookingId
+        let bookingId: string;
+
+        const assignment = await prisma.cleanerAssignment.findUnique({
+            where: { id },
+            select: { bookingId: true, cleanerId: true }
+        });
+
+        if (assignment) {
+            if (assignment.cleanerId !== cleaner.id) {
+                return NextResponse.json({ error: 'Not authorized for this job' }, { status: 403 });
+            }
+            bookingId = assignment.bookingId;
+        } else {
+            bookingId = id;
         }
 
         const jobExecution = await prisma.jobExecution.findUnique({
@@ -253,25 +289,25 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                     }
                 }
 
-                return NextResponse.json({ 
-                    success: true, 
+                return NextResponse.json({
+                    success: true,
                     status: updated.status,
-                    message: 'Checked in successfully' 
+                    message: 'Checked in successfully'
                 });
             }
 
             case 'START': {
                 if (jobExecution.status !== JobExecutionStatus.CHECKED_IN) {
-                    return NextResponse.json({ 
-                        error: 'Must check in first or already started' 
+                    return NextResponse.json({
+                        error: 'Must check in first or already started'
                     }, { status: 400 });
                 }
 
                 // Verify minimum before photos
                 const beforePhotos = jobExecution.photos.filter(p => p.type === 'BEFORE');
                 if (beforePhotos.length < 3) {
-                    return NextResponse.json({ 
-                        error: `Please take at least 3 "before" photos. You have ${beforePhotos.length}.` 
+                    return NextResponse.json({
+                        error: `Please take at least 3 "before" photos. You have ${beforePhotos.length}.`
                     }, { status: 400 });
                 }
 
@@ -283,25 +319,25 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                     }
                 });
 
-                return NextResponse.json({ 
-                    success: true, 
+                return NextResponse.json({
+                    success: true,
                     status: updated.status,
-                    message: 'Job started' 
+                    message: 'Job started'
                 });
             }
 
             case 'COMPLETE': {
                 if (jobExecution.status !== JobExecutionStatus.IN_PROGRESS) {
-                    return NextResponse.json({ 
-                        error: 'Job must be in progress to complete' 
+                    return NextResponse.json({
+                        error: 'Job must be in progress to complete'
                     }, { status: 400 });
                 }
 
                 // Verify minimum after photos
                 const afterPhotos = jobExecution.photos.filter(p => p.type === 'AFTER');
                 if (afterPhotos.length < 3) {
-                    return NextResponse.json({ 
-                        error: `Please take at least 3 "after" photos. You have ${afterPhotos.length}.` 
+                    return NextResponse.json({
+                        error: `Please take at least 3 "after" photos. You have ${afterPhotos.length}.`
                     }, { status: 400 });
                 }
 
@@ -310,7 +346,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                     item => item.isRequired && !item.completed
                 );
                 if (requiredIncomplete.length > 0) {
-                    return NextResponse.json({ 
+                    return NextResponse.json({
                         error: `Please complete all required checklist items. ${requiredIncomplete.length} remaining.`,
                         incompleteItems: requiredIncomplete.map(i => i.task)
                     }, { status: 400 });
@@ -330,7 +366,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                 // Update booking
                 await prisma.booking.update({
                     where: { id: bookingId },
-                    data: { 
+                    data: {
                         status: BookingStatus.COMPLETED
                     }
                 });
@@ -376,10 +412,10 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                     }
                 }
 
-                return NextResponse.json({ 
-                    success: true, 
+                return NextResponse.json({
+                    success: true,
                     status: updated.status,
-                    message: 'Job completed successfully!' 
+                    message: 'Job completed successfully!'
                 });
             }
 
@@ -389,8 +425,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     } catch (error) {
         console.error('[JobExecution] PATCH error:', error);
-        return NextResponse.json({ 
-            error: error instanceof Error ? error.message : 'Failed to update job execution' 
+        return NextResponse.json({
+            error: error instanceof Error ? error.message : 'Failed to update job execution'
         }, { status: 500 });
     }
 }
