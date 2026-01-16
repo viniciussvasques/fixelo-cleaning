@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from '@/components/providers';
 import { Toaster } from 'sonner';
 import { generateOrganizationSchema, generateLocalBusinessSchema } from '@/components/seo/MetaTags';
+import { PushNotificationPrompt } from '@/components/push-notification-prompt';
 
 export const viewport: Viewport = {
   themeColor: [
@@ -128,6 +129,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>{children}</Providers>
         <Toaster position="top-right" richColors closeButton />
+        <PushNotificationPrompt />
       </body>
     </html>
   );

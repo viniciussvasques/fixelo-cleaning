@@ -8,6 +8,27 @@ export default auth((req) => {
     const { nextUrl } = req;
     const session = req.auth;
 
+    // Check maintenance mode
+    const isMaintenanceMode = process.env.MAINTENANCE_MODE === 'true';
+    const maintenanceBypass = req.cookies.get('maintenance_bypass')?.value === 'true';
+
+    // Allow certain paths during maintenance
+    const isAllowedPath =
+        nextUrl.pathname.startsWith('/maintenance') ||
+        nextUrl.pathname.startsWith('/api/maintenance') ||
+        nextUrl.pathname.startsWith('/admin') || // Admin can always access
+        nextUrl.pathname.startsWith('/_next') ||
+        nextUrl.pathname.startsWith('/favicon') ||
+        nextUrl.pathname.includes('.');
+
+    if (isMaintenanceMode && !maintenanceBypass && !isAllowedPath) {
+        // Check if user is admin (they can bypass)
+        const isAdmin = session?.user?.role === 'ADMIN';
+        if (!isAdmin) {
+            return NextResponse.redirect(new URL('/maintenance', nextUrl));
+        }
+    }
+
     const isAuthenticated = !!session?.user;
     const userRole = session?.user?.role;
 
