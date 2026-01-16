@@ -47,7 +47,7 @@ async function getS3Config(): Promise<S3Config> {
         return cachedS3Config;
     } catch (error) {
         console.error('[S3] Error fetching config:', error);
-        
+
         // Fallback to environment variables
         cachedS3Config = {
             region: process.env.AWS_REGION || 'us-east-1',
@@ -103,6 +103,7 @@ export async function uploadToS3(
         Key: key,
         Body: file,
         ContentType: contentType,
+        ACL: 'public-read', // Make uploaded files publicly accessible
     });
 
     await s3.send(command);
@@ -199,7 +200,7 @@ export const UPLOAD_FOLDERS = {
 export async function testS3Connection(): Promise<{ success: boolean; message: string; bucket?: string }> {
     try {
         const config = await getS3Config();
-        
+
         if (!config.accessKeyId || !config.secretAccessKey || !config.bucketName) {
             return {
                 success: false,
@@ -208,16 +209,16 @@ export async function testS3Connection(): Promise<{ success: boolean; message: s
         }
 
         const s3 = await getS3Client();
-        
+
         // Try to list objects (limited to 1) to test connection
         const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
         const command = new ListObjectsV2Command({
             Bucket: config.bucketName,
             MaxKeys: 1,
         });
-        
+
         await s3.send(command);
-        
+
         return {
             success: true,
             message: 'Successfully connected to S3',
