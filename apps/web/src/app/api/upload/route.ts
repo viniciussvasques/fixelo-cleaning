@@ -40,14 +40,14 @@ export async function POST(request: NextRequest) {
         }
 
         if (!ALLOWED_TYPES.includes(file.type)) {
-            return NextResponse.json({ 
-                error: 'Invalid file type. Allowed: JPEG, PNG, WebP, HEIC, PDF' 
+            return NextResponse.json({
+                error: 'Invalid file type. Allowed: JPEG, PNG, WebP, HEIC, PDF'
             }, { status: 400 });
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json({ 
-                error: 'File too large. Maximum size is 10MB' 
+            return NextResponse.json({
+                error: 'File too large. Maximum size is 10MB'
             }, { status: 400 });
         }
 
@@ -75,9 +75,22 @@ export async function POST(request: NextRequest) {
 
         // If it's a job photo, save to database
         if (folder === 'job-photos' && bookingId && photoType) {
+            // Resolve the ID: might be assignmentId or bookingId
+            let resolvedBookingId = bookingId;
+
+            // Check if it's an assignment ID first
+            const assignment = await prisma.cleanerAssignment.findUnique({
+                where: { id: bookingId },
+                select: { bookingId: true }
+            });
+
+            if (assignment) {
+                resolvedBookingId = assignment.bookingId;
+            }
+
             // Get or create job execution
             let jobExecution = await prisma.jobExecution.findUnique({
-                where: { bookingId }
+                where: { bookingId: resolvedBookingId }
             });
 
             if (!jobExecution) {
@@ -89,7 +102,7 @@ export async function POST(request: NextRequest) {
                 if (cleaner) {
                     jobExecution = await prisma.jobExecution.create({
                         data: {
-                            bookingId,
+                            bookingId: resolvedBookingId,
                             cleanerId: cleaner.id,
                             status: 'NOT_STARTED'
                         }
@@ -119,8 +132,8 @@ export async function POST(request: NextRequest) {
 
     } catch (error) {
         console.error('[Upload] Error:', error);
-        return NextResponse.json({ 
-            error: error instanceof Error ? error.message : 'Upload failed' 
+        return NextResponse.json({
+            error: error instanceof Error ? error.message : 'Upload failed'
         }, { status: 500 });
     }
 }
@@ -142,7 +155,7 @@ export async function GET(request: NextRequest) {
 
         const timestamp = Date.now();
         const ext = contentType.split('/')[1] || 'jpg';
-        
+
         let key: string;
         if (bookingId) {
             key = `${folder}/${bookingId}/${timestamp}.${ext}`;
@@ -160,8 +173,8 @@ export async function GET(request: NextRequest) {
 
     } catch (error) {
         console.error('[Upload] Presigned URL error:', error);
-        return NextResponse.json({ 
-            error: 'Failed to generate upload URL' 
+        return NextResponse.json({
+            error: 'Failed to generate upload URL'
         }, { status: 500 });
     }
 }
