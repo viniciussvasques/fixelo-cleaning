@@ -165,12 +165,14 @@ export default function FinancialSettingsPage() {
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Stripe Fee % (Read-only)</Label>
-                                        <Input value={stripeFeePercent} disabled />
+                                        <Label>Stripe Fee (%)</Label>
+                                        <Input type="number" step="0.01" {...register('stripeFeePercent')} />
+                                        <p className="text-xs text-muted-foreground">Stripe processing fee. Default: 2.9%</p>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Stripe Fixed Fee $ (Read-only)</Label>
-                                        <Input value={stripeFeeFixed} disabled />
+                                        <Label>Stripe Fixed Fee ($)</Label>
+                                        <Input type="number" step="0.01" {...register('stripeFeeFixed')} />
+                                        <p className="text-xs text-muted-foreground">Fixed Stripe fee per transaction. Default: $0.30</p>
                                     </div>
                                 </div>
                                 <div className="space-y-2">
