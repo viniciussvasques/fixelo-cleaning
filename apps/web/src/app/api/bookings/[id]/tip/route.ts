@@ -99,84 +99,143 @@ export async function POST(
             });
         }
 
-        // Create a PaymentIntent for the tip that transfers directly to cleaner
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(amount * 100), // cents
-            currency: 'usd',
-            customer: stripeCustomerId || undefined,
-            automatic_payment_methods: {
-                enabled: true,
-            },
-            transfer_data: {
-                destination: cleaner.stripeAccountId,
-            },
-            metadata: {
-                bookingId: booking.id,
-                type: 'tip',
-                customerId: session.user.id,
-                cleanerId: cleaner.id
-            },
-            description: `Tip for booking ${booking.id}`,
-        });
+        // Create a PaymentIntent for the tip
+        // Try to reuse the card from the booking if available
+        let reusedPaymentMethod = false;
+        let paymentIntent;
 
-        // Return client secret for frontend to complete payment
-        if (paymentIntent.status !== 'succeeded') {
-            return NextResponse.json({
-                requiresPayment: true,
-                clientSecret: paymentIntent.client_secret,
-                amount: amount,
-                message: 'Complete payment to send tip'
+        try {
+            if (booking.stripePaymentIntentId) {
+                const originalPi = await stripe.paymentIntents.retrieve(booking.stripePaymentIntentId);
+                if (originalPi.payment_method && typeof originalPi.payment_method === 'string') {
+                    // We have a payment method.
+                    // To reuse it, it must be attached to the Customer.
+                    // Check if it is already attached to this customer
+                    const paymentMethodId = originalPi.payment_method;
+
+                    // Attach if needed
+                    if (stripeCustomerId) {
+                        try {
+                            const pm = await stripe.paymentMethods.retrieve(paymentMethodId);
+                            if (pm.customer !== stripeCustomerId) {
+                                // Try to attach
+                                await stripe.paymentMethods.attach(paymentMethodId, {
+                                    customer: stripeCustomerId,
+                                });
+                            }
+
+                            // Now try to create and confirm PI immediately
+                            paymentIntent = await stripe.paymentIntents.create({
+                                amount: Math.round(amount * 100),
+                                currency: 'usd',
+                                customer: stripeCustomerId,
+                                payment_method: paymentMethodId,
+                                confirm: true, // Try to charge immediately
+                                return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/bookings/${booking.id}`,
+                                transfer_data: {
+                                    destination: cleaner.stripeAccountId,
+                                },
+                                metadata: {
+                                    bookingId: booking.id,
+                                    type: 'tip',
+                                    customerId: session.user.id,
+                                    cleanerId: cleaner.id
+                                },
+                                description: `Tip for booking ${booking.id}`,
+                            });
+
+                            reusedPaymentMethod = true;
+
+                        } catch (err) {
+                            console.log('Failed to reuse payment method, falling back to new payment:', err);
+                            // Fallback to creating a new one below
+                        }
+                    }
+                }
+            }
+        } catch (err) {
+            console.log('Error checking original payment intent:', err);
+        }
+
+        // If reuse failed or wasn't possible, create a fresh PI for the UI to handle
+        if (!paymentIntent) {
+            paymentIntent = await stripe.paymentIntents.create({
+                amount: Math.round(amount * 100), // cents
+                currency: 'usd',
+                customer: stripeCustomerId || undefined,
+                automatic_payment_methods: {
+                    enabled: true,
+                },
+                transfer_data: {
+                    destination: cleaner.stripeAccountId,
+                },
+                metadata: {
+                    bookingId: booking.id,
+                    type: 'tip',
+                    customerId: session.user.id,
+                    cleanerId: cleaner.id
+                },
+                description: `Tip for booking ${booking.id}`,
             });
         }
 
-        // If payment succeeded immediately (saved card), update booking
+        // Return client secret for frontend to complete payment
+        if (paymentIntent.status === 'succeeded') {
+            // One-click success! Update booking immediately
 
-        // Update booking with tip
-        await prisma.booking.update({
-            where: { id: booking.id },
-            data: {
-                tipAmount: { increment: amount },
-                tipPaidAt: new Date()
+            // Update Booking
+            await prisma.booking.update({
+                where: { id: booking.id },
+                data: {
+                    tipAmount: { increment: amount },
+                    tipPaidAt: new Date()
+                }
+            });
+
+            // Notify cleaner about the tip
+            const cleanerUser = cleaner.user;
+
+            // SMS
+            if (cleanerUser.phone) {
+                try {
+                    await sendSMSNotification(
+                        cleanerUser.id,
+                        cleanerUser.phone,
+                        `🎉 You received a $${amount.toFixed(2)} tip from ${booking.user.firstName || 'a customer'}! Thank you for your great work. - Fixelo`,
+                        { bookingId: booking.id, type: 'TIP_RECEIVED' }
+                    );
+                } catch (err) {
+                    console.error('Failed to send tip SMS:', err);
+                }
             }
-        });
 
-        // Notify cleaner about the tip
-        const cleanerUser = cleaner.user;
-
-        // SMS
-        if (cleanerUser.phone) {
+            // Email
             try {
-                await sendSMSNotification(
-                    cleanerUser.id,
-                    cleanerUser.phone,
-                    `🎉 You received a $${amount.toFixed(2)} tip from ${booking.user.firstName || 'a customer'}! Thank you for your great work. - Fixelo`,
-                    { bookingId: booking.id, type: 'TIP_RECEIVED' }
-                );
+                await sendEmailNotification(cleanerUser.id, {
+                    to: cleanerUser.email,
+                    subject: `You received a $${amount.toFixed(2)} tip! 🎉`,
+                    html: `
+                        <h2>Great job! You've received a tip!</h2>
+                        <p>Hi ${cleanerUser.firstName || 'there'},</p>
+                        <p>${booking.user.firstName || 'A customer'} just tipped you <strong>$${amount.toFixed(2)}</strong> for your excellent service!</p>
+                        <p>This tip goes 100% to you and has been added to your account.</p>
+                        <p>Keep up the great work!</p>
+                    `
+                }, { bookingId: booking.id, type: 'TIP_RECEIVED' });
             } catch (err) {
-                console.error('Failed to send tip SMS:', err);
+                console.error('Failed to send tip email:', err);
             }
-        }
 
-        // Email
-        try {
-            await sendEmailNotification(cleanerUser.id, {
-                to: cleanerUser.email,
-                subject: `You received a $${amount.toFixed(2)} tip! 🎉`,
-                html: `
-                    <h2>Great job! You've received a tip!</h2>
-                    <p>Hi ${cleanerUser.firstName || 'there'},</p>
-                    <p>${booking.user.firstName || 'A customer'} just tipped you <strong>$${amount.toFixed(2)}</strong> for your excellent service!</p>
-                    <p>This tip goes 100% to you and has been added to your account.</p>
-                    <p>Keep up the great work!</p>
-                `
-            }, { bookingId: booking.id, type: 'TIP_RECEIVED' });
-        } catch (err) {
-            console.error('Failed to send tip email:', err);
+            return NextResponse.json({
+                success: true,
+                message: `$${amount.toFixed(2)} tip sent to ${cleanerUser.firstName}!`,
+                paymentIntentId: paymentIntent.id
+            });
         }
 
         return NextResponse.json({
-            success: true,
-            message: `$${amount.toFixed(2)} tip sent to ${cleanerUser.firstName}!`,
+            requiresPayment: true,
+            clientSecret: paymentIntent.client_secret,
             paymentIntentId: paymentIntent.id
         });
 
