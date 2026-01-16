@@ -22,7 +22,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const bookingId = params.id;
+        const id = params.id;
         const body = await request.json();
         const { itemId, completed, notes, items } = body;
 
@@ -35,8 +35,20 @@ export async function PATCH(request: NextRequest, { params }: Props) {
             return NextResponse.json({ error: 'Cleaner profile not found' }, { status: 404 });
         }
 
+        // Resolve the ID: might be assignmentId or bookingId
+        let resolvedBookingId = id;
+
+        const assignment = await prisma.cleanerAssignment.findUnique({
+            where: { id },
+            select: { bookingId: true }
+        });
+
+        if (assignment) {
+            resolvedBookingId = assignment.bookingId;
+        }
+
         const jobExecution = await prisma.jobExecution.findUnique({
-            where: { bookingId },
+            where: { bookingId: resolvedBookingId },
             include: { checklist: true }
         });
 
@@ -78,9 +90,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                 });
             }
 
-            return NextResponse.json({ 
-                success: true, 
-                message: `${items.length} items updated` 
+            return NextResponse.json({
+                success: true,
+                message: `${items.length} items updated`
             });
         }
 
@@ -125,8 +137,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     } catch (error) {
         console.error('[Checklist] PATCH error:', error);
-        return NextResponse.json({ 
-            error: error instanceof Error ? error.message : 'Failed to update checklist' 
+        return NextResponse.json({
+            error: error instanceof Error ? error.message : 'Failed to update checklist'
         }, { status: 500 });
     }
 }

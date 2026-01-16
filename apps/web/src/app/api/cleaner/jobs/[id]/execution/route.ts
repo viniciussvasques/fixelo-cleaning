@@ -155,8 +155,8 @@ export async function GET(request: NextRequest, { params }: Props) {
                 checklist: totalChecklist > 0 ? Math.round((completedChecklist / totalChecklist) * 100) : 0,
                 beforePhotos,
                 afterPhotos,
-                requiredBeforePhotos: 3, // Minimum required
-                requiredAfterPhotos: 3,
+                requiredBeforePhotos: 20, // Minimum required
+                requiredAfterPhotos: 20,
             }
         });
 
