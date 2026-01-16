@@ -318,6 +318,13 @@ model ServiceType {
   pricePerPet Float     @default(15.00)
   
   isActive    Boolean   @default(true)
+  
+  // Métricas de Duração Real (calculadas)
+  avgActualDuration    Int?      // Duração média real (calculada)
+  minActualDuration    Int?      // Duração mínima registrada
+  maxActualDuration    Int?      // Duração máxima registrada
+  durationSampleCount  Int       @default(0) // Quantidade de amostras
+  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -363,6 +370,11 @@ model Booking {
   scheduledDate          DateTime
   timeWindow             String        // '09:00-12:00'
   estimatedDuration      Int           // minutes
+  
+  // Janela de Chegada do Cleaner
+  arrivalWindowStart     DateTime?     // Hora de início da janela (calculada)
+  arrivalWindowEnd       DateTime?     // Hora fim da janela (tolerância)
+  arrivalWindowMinutes   Int           @default(30) // Tolerância em minutos
   
   // Home details
   bedrooms               Int
@@ -938,6 +950,13 @@ model JobExecution {
   
   // Checklist completion
   checklistCompletedAt DateTime?
+  
+  // Métricas de Tempo e Pontualidade
+  expectedDuration   Int?       // Duração esperada (minutos)
+  actualDuration     Int?       // Duração real (minutos) - calculado ao completar
+  lateArrival        Boolean    @default(false)  // Chegou atrasado?
+  lateArrivalMinutes Int?       // Quantos minutos de atraso
+  earlyArrivalMinutes Int?      // Quantos minutos adiantado
   
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
