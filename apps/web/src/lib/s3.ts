@@ -103,7 +103,8 @@ export async function uploadToS3(
         Key: key,
         Body: file,
         ContentType: contentType,
-        ACL: 'public-read', // Make uploaded files publicly accessible
+        // Note: ACL not used because bucket has Block Public Access enabled
+        // Photos are accessed via presigned URLs instead
     });
 
     await s3.send(command);

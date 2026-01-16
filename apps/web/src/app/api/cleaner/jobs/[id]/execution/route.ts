@@ -11,6 +11,7 @@ import { BookingStatus, JobExecutionStatus } from '@prisma/client';
 import { sendSMSNotification, SMS_TEMPLATES } from '@/lib/sms';
 import { sendEmailNotification } from '@/lib/email';
 import { isWithinCheckInRadius, formatDistance } from '@/lib/geofencing';
+import { getPresignedDownloadUrl } from '@/lib/s3';
 
 interface Props {
     params: { id: string };
@@ -149,8 +150,27 @@ export async function GET(request: NextRequest, { params }: Props) {
         const beforePhotos = jobExecution.photos.filter(p => p.type === 'BEFORE').length;
         const afterPhotos = jobExecution.photos.filter(p => p.type === 'AFTER').length;
 
+        // Generate presigned URLs for photos (since bucket blocks public access)
+        const photosWithPresignedUrls = await Promise.all(
+            jobExecution.photos.map(async (photo) => {
+                try {
+                    // Extract the S3 key from the URL or use s3Key field
+                    const s3Key = photo.s3Key || photo.url.split('.amazonaws.com/')[1];
+                    if (s3Key) {
+                        const presignedUrl = await getPresignedDownloadUrl(s3Key, 3600); // 1 hour
+                        return { ...photo, url: presignedUrl };
+                    }
+                    return photo;
+                } catch (error) {
+                    console.error(`[JobExecution] Error generating presigned URL for photo ${photo.id}:`, error);
+                    return photo;
+                }
+            })
+        );
+
         return NextResponse.json({
             ...jobExecution,
+            photos: photosWithPresignedUrls,
             progress: {
                 checklist: totalChecklist > 0 ? Math.round((completedChecklist / totalChecklist) * 100) : 0,
                 beforePhotos,
