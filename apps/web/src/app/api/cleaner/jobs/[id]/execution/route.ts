@@ -259,15 +259,51 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                     }
                 }
 
+                // Calculate arrival timing (late or early)
+                const booking = jobExecution.booking;
+                const now = new Date();
+                let lateArrival = false;
+                let lateArrivalMinutes: number | null = null;
+                let earlyArrivalMinutes: number | null = null;
+
+                if (booking.arrivalWindowEnd) {
+                    const windowEnd = new Date(booking.arrivalWindowEnd);
+                    if (now > windowEnd) {
+                        lateArrival = true;
+                        lateArrivalMinutes = Math.floor((now.getTime() - windowEnd.getTime()) / 60000);
+                    }
+                }
+
+                if (booking.arrivalWindowStart && !lateArrival) {
+                    const windowStart = new Date(booking.arrivalWindowStart);
+                    if (now < windowStart) {
+                        earlyArrivalMinutes = Math.floor((windowStart.getTime() - now.getTime()) / 60000);
+                    }
+                }
+
                 const updated = await prisma.jobExecution.update({
                     where: { id: jobExecution.id },
                     data: {
                         status: JobExecutionStatus.CHECKED_IN,
-                        checkedInAt: new Date(),
+                        checkedInAt: now,
                         checkinLat: latitude,
-                        checkinLng: longitude
+                        checkinLng: longitude,
+                        expectedDuration: booking.estimatedDuration,
+                        lateArrival,
+                        lateArrivalMinutes,
+                        earlyArrivalMinutes
                     }
                 });
+
+                // Update cleaner punctuality metrics if late
+                if (lateArrival) {
+                    await prisma.cleanerProfile.update({
+                        where: { id: cleaner.id },
+                        data: {
+                            totalLateArrivals: { increment: 1 }
+                        }
+                    });
+                }
 
                 // Update booking status
                 await prisma.booking.update({
@@ -352,16 +388,53 @@ export async function PATCH(request: NextRequest, { params }: Props) {
                     }, { status: 400 });
                 }
 
+                // Calculate actual duration
+                const completedAt = new Date();
+                let actualDuration: number | null = null;
+
+                if (jobExecution.startedAt) {
+                    const startTime = new Date(jobExecution.startedAt).getTime();
+                    actualDuration = Math.floor((completedAt.getTime() - startTime) / 60000);
+                }
+
                 // Complete the job
                 const updated = await prisma.jobExecution.update({
                     where: { id: jobExecution.id },
                     data: {
                         status: JobExecutionStatus.COMPLETED,
-                        completedAt: new Date(),
+                        completedAt,
                         checkoutLat: latitude,
-                        checkoutLng: longitude
+                        checkoutLng: longitude,
+                        actualDuration
                     }
                 });
+
+                // Update ServiceType duration metrics
+                if (actualDuration) {
+                    const serviceType = await prisma.serviceType.findUnique({
+                        where: { id: jobExecution.booking.serviceTypeId }
+                    });
+
+                    if (serviceType) {
+                        const newSampleCount = serviceType.durationSampleCount + 1;
+                        const currentAvg = serviceType.avgActualDuration || actualDuration;
+                        const newAvg = Math.round(((currentAvg * serviceType.durationSampleCount) + actualDuration) / newSampleCount);
+
+                        await prisma.serviceType.update({
+                            where: { id: serviceType.id },
+                            data: {
+                                avgActualDuration: newAvg,
+                                minActualDuration: serviceType.minActualDuration
+                                    ? Math.min(serviceType.minActualDuration, actualDuration)
+                                    : actualDuration,
+                                maxActualDuration: serviceType.maxActualDuration
+                                    ? Math.max(serviceType.maxActualDuration, actualDuration)
+                                    : actualDuration,
+                                durationSampleCount: newSampleCount
+                            }
+                        });
+                    }
+                }
 
                 // Update booking
                 await prisma.booking.update({

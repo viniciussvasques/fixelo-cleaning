@@ -40,6 +40,59 @@ export async function acceptJob(id: string) {
         bookingId = id;
     }
 
+    // Check for conflicting jobs in the same time window
+    const booking = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        select: { scheduledDate: true, timeWindow: true }
+    });
+
+    if (booking) {
+        const [startTime, endTime] = booking.timeWindow.split('-');
+        const targetDate = new Date(booking.scheduledDate);
+
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Parse time to minutes for comparison
+        const parseTime = (timeStr: string): number => {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            return hours * 60 + (minutes || 0);
+        };
+
+        const targetStart = parseTime(startTime);
+        const targetEnd = parseTime(endTime);
+
+        // Check for existing accepted jobs that overlap
+        const existingJobs = await prisma.cleanerAssignment.findMany({
+            where: {
+                cleanerId: cleaner.id,
+                status: AssignmentStatus.ACCEPTED,
+                booking: {
+                    id: { not: bookingId },
+                    scheduledDate: { gte: startOfDay, lte: endOfDay },
+                    status: { notIn: [BookingStatus.CANCELLED, BookingStatus.COMPLETED] }
+                }
+            },
+            include: {
+                booking: { select: { timeWindow: true, serviceType: { select: { name: true } } } }
+            }
+        });
+
+        for (const job of existingJobs) {
+            const [jobStart, jobEnd] = job.booking.timeWindow.split('-');
+            const jobStartMin = parseTime(jobStart);
+            const jobEndMin = parseTime(jobEnd);
+
+            // Check for overlap
+            if (targetStart < jobEndMin && targetEnd > jobStartMin) {
+                throw new Error(`You already have a job (${job.booking.serviceType.name}) scheduled for ${job.booking.timeWindow} on this day. You cannot accept overlapping jobs.`);
+            }
+        }
+    }
+
     // Transaction to ensure atomicity
     await prisma.$transaction(async (tx) => {
         if (existingAssignment) {
