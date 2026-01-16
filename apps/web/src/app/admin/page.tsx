@@ -7,6 +7,8 @@ import {
     TrendingUp,
     ArrowUpRight,
     Package,
+    Wallet,
+    PiggyBank,
 } from 'lucide-react';
 import { StatCard } from '@/components/ui/stat-card';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +38,13 @@ export default async function AdminDashboard() {
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
     // Fetch current period stats
+    // Get financial settings for fee calculations
+    const financialSettings = await prisma.financialSettings.findFirst();
+    const platformFeePercent = financialSettings?.platformFeePercent ?? 0.15;
+    const insuranceFeePercent = financialSettings?.insuranceFeePercent ?? 0.02;
+    const stripeFeePercent = financialSettings?.stripeFeePercent ?? 0.029;
+    const stripeFeeFixed = financialSettings?.stripeFeeFixed ?? 0.30;
+
     const [bookingsCount, usersCount, cleanersCount, revenue] = await Promise.all([
         prisma.booking.count(),
         prisma.user.count(),
@@ -45,6 +54,14 @@ export default async function AdminDashboard() {
             _sum: { totalPrice: true },
         }),
     ]);
+
+    // Calculate platform earnings and cleaner payouts
+    const totalRevenue = revenue._sum.totalPrice || 0;
+    const stripeFees = (totalRevenue * stripeFeePercent) + (stripeFeeFixed * (await prisma.booking.count({ where: { status: BookingStatus.COMPLETED } })));
+    const netAfterStripe = totalRevenue - stripeFees;
+    const platformEarnings = netAfterStripe * platformFeePercent;
+    const insuranceFees = netAfterStripe * insuranceFeePercent;
+    const cleanerPayouts = netAfterStripe - platformEarnings - insuranceFees;
 
     // Fetch previous period stats for trends
     const [
@@ -136,6 +153,18 @@ export default async function AdminDashboard() {
             icon: <Calendar className="w-6 h-6" />,
             trend: bookingsTrend,
         },
+        {
+            title: 'Platform Earnings',
+            value: formatCurrency(platformEarnings),
+            icon: <Wallet className="w-6 h-6" />,
+            description: `${(platformFeePercent * 100).toFixed(0)}% commission`,
+        },
+        {
+            title: 'Cleaner Payouts',
+            value: formatCurrency(cleanerPayouts),
+            icon: <PiggyBank className="w-6 h-6" />,
+            description: `${((1 - platformFeePercent - insuranceFeePercent) * 100).toFixed(0)}% to cleaners`,
+        },
     ];
 
     // Recent bookings
@@ -171,7 +200,7 @@ export default async function AdminDashboard() {
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
                 {stats.map((stat, index) => (
                     <StatCard key={index} {...stat} />
                 ))}
