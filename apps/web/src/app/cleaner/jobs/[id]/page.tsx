@@ -155,11 +155,12 @@ export default async function JobDetailsPage({ params }: { params: { id: string 
                                         <ChatInterface bookingId={booking.id} currentUserId={session!.user!.id} />
                                     </div>
 
-                                    {(booking.status === 'ACCEPTED' || booking.status === 'IN_PROGRESS') && (
+                                    {/* Always show Start Job button if job is accepted but not completed */}
+                                    {booking.status !== 'COMPLETED' && booking.status !== 'CANCELLED' && (
                                         <Link href={`/cleaner/jobs/${params.id}/execute`} className="block mt-4">
                                             <Button className="w-full bg-green-600 hover:bg-green-700 h-14 text-lg gap-2">
                                                 <Play className="w-5 h-5" />
-                                                Start Job - Check In
+                                                {booking.status === 'IN_PROGRESS' ? 'Continue Job' : 'Start Job - Check In'}
                                             </Button>
                                         </Link>
                                     )}
