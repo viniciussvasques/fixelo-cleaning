@@ -58,11 +58,72 @@ export async function POST(
         // Get optional completion data
         const body = await request.json().catch(() => ({}));
 
+        const now = new Date();
+
+        // Get JobExecution to calculate actual duration
+        const jobExecution = await prisma.jobExecution.findFirst({
+            where: { bookingId },
+        });
+
+        let actualDurationMinutes: number | null = null;
+
+        if (jobExecution?.checkedInAt) {
+            // Calculate actual duration in minutes
+            actualDurationMinutes = Math.round(
+                (now.getTime() - new Date(jobExecution.checkedInAt).getTime()) / 60000
+            );
+
+            // Update JobExecution with actual duration and completion time
+            await prisma.jobExecution.update({
+                where: { id: jobExecution.id },
+                data: {
+                    status: 'COMPLETED',
+                    actualDuration: actualDurationMinutes,
+                    completedAt: now,
+                }
+            });
+
+            console.log(`[JobComplete] Job ${bookingId} actualDuration: ${actualDurationMinutes} minutes`);
+        }
+
         // Update booking to COMPLETED
-        await prisma.booking.update({
+        const completedBooking = await prisma.booking.update({
             where: { id: bookingId },
             data: { status: 'COMPLETED' },
+            include: { serviceType: true }
         });
+
+        // Update ServiceType avgActualDuration (running average)
+        if (actualDurationMinutes && completedBooking.serviceType) {
+            const serviceType = completedBooking.serviceType;
+            const currentCount = serviceType.durationSampleCount || 0;
+            const currentAvg = serviceType.avgActualDuration || actualDurationMinutes;
+
+            // Calculate new running average
+            const newAvg = Math.round(
+                (currentAvg * currentCount + actualDurationMinutes) / (currentCount + 1)
+            );
+
+            // Update min/max
+            const newMin = serviceType.minActualDuration
+                ? Math.min(serviceType.minActualDuration, actualDurationMinutes)
+                : actualDurationMinutes;
+            const newMax = serviceType.maxActualDuration
+                ? Math.max(serviceType.maxActualDuration, actualDurationMinutes)
+                : actualDurationMinutes;
+
+            await prisma.serviceType.update({
+                where: { id: serviceType.id },
+                data: {
+                    avgActualDuration: newAvg,
+                    minActualDuration: newMin,
+                    maxActualDuration: newMax,
+                    durationSampleCount: currentCount + 1,
+                }
+            });
+
+            console.log(`[JobComplete] Updated ${serviceType.name} avgDuration: ${newAvg}min (samples: ${currentCount + 1})`);
+        }
 
         // Update cleaner metrics
         await prisma.cleanerProfile.update({
@@ -84,7 +145,7 @@ export async function POST(
         try {
             const booking = await prisma.booking.findUnique({
                 where: { id: bookingId },
-                include: { 
+                include: {
                     user: true,
                     serviceType: true,
                 }
