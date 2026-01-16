@@ -133,9 +133,11 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <Providers>
+          {children}
+          <PushNotificationPrompt />
+        </Providers>
         <Toaster position="top-right" richColors closeButton />
-        <PushNotificationPrompt />
       </body>
     </html>
   );
