@@ -9,8 +9,9 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Loader2, Phone, User, CheckCircle } from 'lucide-react';
+import { Loader2, Phone, User, CheckCircle, Smartphone, ChevronDown, ChevronUp } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { QRCodeLogin } from '@/components/qr-code-login';
 
 const accountSchema = z.object({
     firstName: z.string().min(2, 'First name is required'),
@@ -25,6 +26,7 @@ export default function AccountStep() {
     const { data: session } = useSession();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showQR, setShowQR] = useState(false);
 
     const {
         register,
@@ -52,7 +54,7 @@ export default function AccountStep() {
                 setIsLoading(false);
             }
         };
-        
+
         if (session?.user) {
             // Also try to use session data
             const nameParts = session.user.name?.split(' ') || [];
@@ -166,6 +168,28 @@ export default function AccountStep() {
                     )}
                 </Button>
             </form>
+
+            {/* Continue on Mobile Option */}
+            <div className="mt-8 border-t border-slate-200 pt-6">
+                <button
+                    type="button"
+                    onClick={() => setShowQR(!showQR)}
+                    className="w-full flex items-center justify-center gap-2 text-slate-600 hover:text-slate-800 text-sm py-2"
+                >
+                    <Smartphone className="w-4 h-4" />
+                    <span>Continue on your phone instead</span>
+                    {showQR ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </button>
+
+                {showQR && (
+                    <div className="mt-4">
+                        <QRCodeLogin
+                            title="Continue on Mobile"
+                            description="Scan to complete registration on your phone"
+                        />
+                    </div>
+                )}
+            </div>
 
             <p className="text-center text-xs text-slate-500 mt-8">
                 By continuing, you agree to our{' '}
