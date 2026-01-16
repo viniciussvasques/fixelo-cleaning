@@ -3,6 +3,7 @@ import { prisma } from '@fixelo/database';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { User, Mail, Phone, MapPin, Star, Briefcase, Calendar } from 'lucide-react';
+import { LogoutButton } from '@/components/logout-button';
 
 export default async function CleanerProfilePage() {
     const session = await auth();
@@ -220,6 +221,12 @@ export default async function CleanerProfilePage() {
                             <Link href="/cleaner/schedule" className="btn btn-outline w-full">
                                 Manage Schedule
                             </Link>
+                            <Link href="/cleaner/help" className="btn btn-outline w-full">
+                                Help & Support
+                            </Link>
+                            <div className="pt-4 border-t mt-4">
+                                <LogoutButton />
+                            </div>
                         </div>
                     </div>
                 </div>

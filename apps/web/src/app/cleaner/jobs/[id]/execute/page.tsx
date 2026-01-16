@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { 
-    CheckCircle, 
-    Camera, 
-    MessageCircle, 
-    Clock, 
+import {
+    CheckCircle,
+    Camera,
+    MessageCircle,
+    Clock,
     MapPin,
     ChevronRight,
     Loader2,
@@ -101,7 +101,7 @@ export default function JobExecutionPage() {
     const params = useParams();
     const router = useRouter();
     const bookingId = params.id as string;
-    
+
     const [execution, setExecution] = useState<JobExecution | null>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
@@ -113,11 +113,11 @@ export default function JobExecutionPage() {
     // Timer effect
     useEffect(() => {
         if (!execution) return;
-        
-        const startTime = execution.startedAt 
-            ? new Date(execution.startedAt).getTime() 
+
+        const startTime = execution.startedAt
+            ? new Date(execution.startedAt).getTime()
             : null;
-        
+
         if (!startTime || execution.status === 'COMPLETED') return;
 
         const timer = setInterval(() => {
@@ -133,7 +133,7 @@ export default function JobExecutionPage() {
         const hrs = Math.floor(seconds / 3600);
         const mins = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
-        
+
         if (hrs > 0) {
             return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
@@ -169,7 +169,7 @@ export default function JobExecutionPage() {
                         timeout: 10000
                     });
                 }).catch(() => null);
-                
+
                 if (position) {
                     latitude = position.coords.latitude;
                     longitude = position.coords.longitude;
@@ -273,10 +273,10 @@ export default function JobExecutionPage() {
                 <div className="flex-1 min-w-0">
                     <h1 className="text-xl sm:text-2xl font-bold truncate">{booking.serviceType.name}</h1>
                     <p className="text-sm sm:text-base text-gray-500">
-                        {new Date(booking.scheduledDate).toLocaleDateString(undefined, { 
-                            weekday: 'short', 
-                            month: 'short', 
-                            day: 'numeric' 
+                        {new Date(booking.scheduledDate).toLocaleDateString(undefined, {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric'
                         })} • {booking.timeWindow}
                     </p>
                 </div>
@@ -316,7 +316,7 @@ export default function JobExecutionPage() {
                 </Button>
                 {address && (
                     <Button variant="outline" size="sm" className="shrink-0" asChild>
-                        <a 
+                        <a
                             href={`https://maps.google.com/?q=${encodeURIComponent(`${address.street}, ${address.city}, ${address.state} ${address.zip}`)}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -430,9 +430,9 @@ export default function JobExecutionPage() {
                                     <span>Before Photos</span>
                                     <span>{progress.beforePhotos}/{progress.requiredBeforePhotos}</span>
                                 </div>
-                                <Progress 
-                                    value={(progress.beforePhotos / progress.requiredBeforePhotos) * 100} 
-                                    className="h-2" 
+                                <Progress
+                                    value={(progress.beforePhotos / progress.requiredBeforePhotos) * 100}
+                                    className="h-2"
                                 />
                             </div>
                             <div>
@@ -440,9 +440,9 @@ export default function JobExecutionPage() {
                                     <span>After Photos</span>
                                     <span>{progress.afterPhotos}/{progress.requiredAfterPhotos}</span>
                                 </div>
-                                <Progress 
-                                    value={(progress.afterPhotos / progress.requiredAfterPhotos) * 100} 
-                                    className="h-2" 
+                                <Progress
+                                    value={(progress.afterPhotos / progress.requiredAfterPhotos) * 100}
+                                    className="h-2"
                                 />
                             </div>
                         </CardContent>
@@ -461,11 +461,10 @@ export default function JobExecutionPage() {
                                     <button
                                         key={item.id}
                                         onClick={() => handleToggleChecklist(item.id, !item.completed)}
-                                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${
-                                            item.completed 
-                                                ? 'bg-green-50 text-green-700' 
+                                        className={`w-full flex items-center gap-3 p-3 rounded-lg transition-colors ${item.completed
+                                                ? 'bg-green-50 text-green-700'
                                                 : 'bg-gray-50 hover:bg-gray-100'
-                                        }`}
+                                            }`}
                                         disabled={status === 'NOT_STARTED'}
                                     >
                                         {item.completed ? (
@@ -484,7 +483,7 @@ export default function JobExecutionPage() {
                             </CardContent>
                         </Card>
                     ))}
-                    
+
                     {execution.checklist.length === 0 && (
                         <div className="text-center py-8 text-gray-500">
                             <List className="w-12 h-12 mx-auto mb-2 opacity-50" />
@@ -495,7 +494,7 @@ export default function JobExecutionPage() {
 
                 {/* Before Photos Tab */}
                 <TabsContent value="before">
-                    <PhotoUploadSection 
+                    <PhotoUploadSection
                         bookingId={bookingId}
                         type="BEFORE"
                         photos={execution.photos.filter(p => p.type === 'BEFORE')}
@@ -507,7 +506,7 @@ export default function JobExecutionPage() {
 
                 {/* After Photos Tab */}
                 <TabsContent value="after">
-                    <PhotoUploadSection 
+                    <PhotoUploadSection
                         bookingId={bookingId}
                         type="AFTER"
                         photos={execution.photos.filter(p => p.type === 'AFTER')}
@@ -519,10 +518,11 @@ export default function JobExecutionPage() {
             </Tabs>
 
             {/* Fixed Action Button - Mobile Optimized */}
-            <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 safe-area-bottom z-40 lg:left-64 lg:shadow-none">
+            {/* Note: bottom-16 accounts for the 64px (h-16) bottom nav on mobile */}
+            <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 bg-white border-t shadow-lg p-4 z-50 lg:left-64 lg:shadow-none">
                 <div className="max-w-2xl mx-auto">
                     {status === 'NOT_STARTED' && (
-                        <Button 
+                        <Button
                             onClick={() => handleAction('CHECK_IN')}
                             className="w-full h-14 text-lg"
                             disabled={actionLoading}
@@ -535,9 +535,9 @@ export default function JobExecutionPage() {
                             Check In - I've Arrived
                         </Button>
                     )}
-                    
+
                     {status === 'CHECKED_IN' && (
-                        <Button 
+                        <Button
                             onClick={() => handleAction('START')}
                             className="w-full h-14 text-lg"
                             disabled={actionLoading || progress.beforePhotos < progress.requiredBeforePhotos}
@@ -555,13 +555,13 @@ export default function JobExecutionPage() {
                             )}
                         </Button>
                     )}
-                    
+
                     {status === 'IN_PROGRESS' && (
-                        <Button 
+                        <Button
                             onClick={() => handleAction('COMPLETE')}
                             className="w-full h-14 text-lg bg-green-600 hover:bg-green-700"
                             disabled={
-                                actionLoading || 
+                                actionLoading ||
                                 progress.afterPhotos < progress.requiredAfterPhotos ||
                                 progress.checklist < 100
                             }
@@ -579,12 +579,12 @@ export default function JobExecutionPage() {
                             )}
                         </Button>
                     )}
-                    
+
                     {status === 'COMPLETED' && (
                         <div className="space-y-3">
                             {/* Post-job actions */}
                             <div className="flex gap-2">
-                                <Button 
+                                <Button
                                     variant="outline"
                                     className="flex-1"
                                     onClick={() => setShowRatingModal(true)}
@@ -592,7 +592,7 @@ export default function JobExecutionPage() {
                                     <Star className="w-4 h-4 mr-2 text-yellow-500" />
                                     Rate Client
                                 </Button>
-                                <Button 
+                                <Button
                                     variant="outline"
                                     className="flex-1"
                                     onClick={async () => {
@@ -613,7 +613,7 @@ export default function JobExecutionPage() {
                                     Send Report
                                 </Button>
                             </div>
-                            <Button 
+                            <Button
                                 variant="outline"
                                 className="w-full h-12"
                                 asChild
@@ -630,19 +630,19 @@ export default function JobExecutionPage() {
 
             {/* Note Modal */}
             {showNoteModal && (
-                <NoteModal 
+                <NoteModal
                     bookingId={bookingId}
                     clientId={customer.id}
-                    onClose={() => setShowNoteModal(false)} 
+                    onClose={() => setShowNoteModal(false)}
                 />
             )}
 
             {/* Rating Modal */}
             {showRatingModal && (
-                <ClientRatingModal 
+                <ClientRatingModal
                     bookingId={bookingId}
                     clientName={`${customer.firstName} ${customer.lastName}`}
-                    onClose={() => setShowRatingModal(false)} 
+                    onClose={() => setShowRatingModal(false)}
                 />
             )}
         </div>
@@ -650,13 +650,13 @@ export default function JobExecutionPage() {
 }
 
 // Photo Upload Section Component
-function PhotoUploadSection({ 
-    bookingId, 
-    type, 
-    photos, 
-    required, 
+function PhotoUploadSection({
+    bookingId,
+    type,
+    photos,
+    required,
     disabled,
-    onUpload 
+    onUpload
 }: {
     bookingId: string;
     type: 'BEFORE' | 'AFTER';
@@ -673,7 +673,7 @@ function PhotoUploadSection({
         if (!files || files.length === 0) return;
 
         setUploading(true);
-        
+
         for (const file of Array.from(files)) {
             try {
                 const formData = new FormData();
@@ -735,8 +735,8 @@ function PhotoUploadSection({
                 <div className="text-center py-12 bg-gray-50 rounded-lg">
                     <Camera className="w-12 h-12 mx-auto text-gray-400 mb-2" />
                     <p className="text-gray-500">
-                        {disabled 
-                            ? type === 'BEFORE' 
+                        {disabled
+                            ? type === 'BEFORE'
                                 ? 'Check in first to take photos'
                                 : 'Start the job to take after photos'
                             : `Take at least ${required} ${type.toLowerCase()} photos`
@@ -747,8 +747,8 @@ function PhotoUploadSection({
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {photos.map(photo => (
                         <div key={photo.id} className="relative aspect-square rounded-lg overflow-hidden">
-                            <img 
-                                src={photo.url} 
+                            <img
+                                src={photo.url}
                                 alt={`${type} photo`}
                                 className="w-full h-full object-cover"
                             />
@@ -766,11 +766,11 @@ function PhotoUploadSection({
 }
 
 // Note Modal Component
-function NoteModal({ 
-    bookingId, 
-    clientId, 
-    onClose 
-}: { 
+function NoteModal({
+    bookingId,
+    clientId,
+    onClose
+}: {
     bookingId: string;
     clientId: string;
     onClose: () => void;
@@ -819,7 +819,7 @@ function NoteModal({
                     </h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">×</button>
                 </div>
-                
+
                 <p className="text-sm text-gray-500">
                     Add a private note about this client or location. Only you can see this.
                 </p>
@@ -857,11 +857,11 @@ function NoteModal({
 }
 
 // Client Rating Modal Component
-function ClientRatingModal({ 
-    bookingId, 
+function ClientRatingModal({
+    bookingId,
     clientName,
-    onClose 
-}: { 
+    onClose
+}: {
     bookingId: string;
     clientName: string;
     onClose: () => void;
@@ -902,7 +902,7 @@ function ClientRatingModal({
                     <h2 className="text-lg font-semibold">Rate {clientName}</h2>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">×</button>
                 </div>
-                
+
                 <p className="text-sm text-gray-500">
                     This rating is private and helps you remember clients for future jobs.
                 </p>
@@ -915,12 +915,11 @@ function ClientRatingModal({
                             onClick={() => setRating(star)}
                             className="p-1"
                         >
-                            <Star 
-                                className={`w-10 h-10 transition-colors ${
-                                    star <= rating 
-                                        ? 'fill-yellow-400 text-yellow-400' 
+                            <Star
+                                className={`w-10 h-10 transition-colors ${star <= rating
+                                        ? 'fill-yellow-400 text-yellow-400'
                                         : 'text-gray-300'
-                                }`} 
+                                    }`}
                             />
                         </button>
                     ))}
