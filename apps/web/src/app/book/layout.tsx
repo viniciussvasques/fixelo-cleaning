@@ -42,7 +42,7 @@ export default function BookLayout({
                             </div>
                             <div className="flex items-center gap-2">
                                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                <span>4.8/5 Rating</span>
+                                <span>Quality Guaranteed</span>
                             </div>
                         </div>
 

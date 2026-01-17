@@ -34,7 +34,7 @@ export default function BecomeAProPage() {
                         <div className="text-center lg:text-left">
                             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm font-semibold mb-6 border border-blue-100">
                                 <Star className="w-4 h-4 fill-current" />
-                                Join 500+ Top Pros in Orlando
+                                Join Our Pro Network in Orlando
                             </div>
                             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 text-slate-900 leading-tight">
                                 Earn more doing what you love. <br />
@@ -66,18 +66,16 @@ export default function BecomeAProPage() {
                             <div className="relative rounded-3xl overflow-hidden shadow-2xl border-4 border-white bg-gradient-to-br from-slate-100 to-slate-200 aspect-[4/3] flex items-center justify-center">
                                 <div className="text-center p-8">
                                     <div className="bg-white p-6 rounded-2xl shadow-lg inline-block mb-4">
-                                        <div className="text-4xl font-bold text-green-600 mb-1">$1,250</div>
-                                        <div className="text-slate-500 text-sm font-medium">Weekly Earnings Avg.</div>
+                                        <div className="text-4xl font-bold text-green-600 mb-1">Competitive</div>
+                                        <div className="text-slate-500 text-sm font-medium">Weekly Earnings</div>
                                     </div>
-                                    <div className="flex justify-center gap-4">
-                                        <div className="bg-white p-4 rounded-xl shadow-md w-32">
-                                            <div className="font-bold text-slate-900">25+</div>
-                                            <div className="text-xs text-slate-500">Jobs Available</div>
-                                        </div>
-                                        <div className="bg-white p-4 rounded-xl shadow-md w-32">
-                                            <div className="font-bold text-slate-900">4.9★</div>
-                                            <div className="text-xs text-slate-500">Client Rating</div>
-                                        </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-md w-32">
+                                        <div className="font-bold text-slate-900">New</div>
+                                        <div className="text-xs text-slate-500">Jobs Daily</div>
+                                    </div>
+                                    <div className="bg-white p-4 rounded-xl shadow-md w-32">
+                                        <div className="font-bold text-slate-900">Quality</div>
+                                        <div className="text-xs text-slate-500">Clients</div>
                                     </div>
                                 </div>
                             </div>

@@ -94,7 +94,7 @@ export const pageMetadata = {
     becomeAPro: generateMetadata({
         title: 'Become a Pro Cleaner',
         description:
-            'Join Fixelo and earn up to $1,250/week as a professional cleaner. Set your own schedule, get weekly payouts, and grow your business.',
+            'Join Fixelo as a professional cleaner in Orlando. Set your own schedule, get weekly payouts, and grow your cleaning business with us.',
         url: `${siteConfig.url}/become-a-pro`,
         keywords: ['cleaning jobs Orlando', 'become a cleaner', 'cleaning business'],
     }),
@@ -174,11 +174,6 @@ export function generateLocalBusinessSchema() {
                 closes: '18:00',
             },
         ],
-        aggregateRating: {
-            '@type': 'AggregateRating',
-            ratingValue: '4.9',
-            reviewCount: '1000',
-        },
     };
 }
 

@@ -99,7 +99,7 @@ export default function HomePage() {
             {/* Trust Badge */}
             <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-xs sm:text-sm font-semibold mb-6 sm:mb-8 border border-blue-100 animate-fade-in">
               <Star className="w-4 h-4 fill-current" />
-              Trusted by 1,000+ homes in Orlando
+              Professional Cleaning in Orlando
             </div>
 
             {/* Headline */}
@@ -139,7 +139,7 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2 animate-fade-in" style={{ animationDelay: '0.4s' }}>
                 <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                <span className="text-sm font-medium">4.9★ Rating</span>
+                <span className="text-sm font-medium">Quality Guaranteed</span>
               </div>
               <div className="flex items-center gap-2 animate-fade-in" style={{ animationDelay: '0.6s' }}>
                 <Zap className="w-5 h-5 text-blue-500" />
@@ -328,7 +328,7 @@ export default function HomePage() {
             Ready for a Sparkling Clean Home?
           </h2>
           <p className="text-lg sm:text-xl lg:text-2xl text-blue-100 mb-8 sm:mb-10 max-w-3xl mx-auto leading-relaxed px-4">
-            Join thousands of happy customers in Orlando. Book your first cleaning today and experience the Fixelo difference!
+            Book your first cleaning today and experience the Fixelo difference! Professional, reliable, and thorough.
           </p>
           <Link
             href="/book"
@@ -348,7 +348,7 @@ export default function HomePage() {
             <div className="col-span-2 md:col-span-1">
               <Image src="/logo.svg" alt="Fixelo" width={120} height={30} className="h-8 w-auto mb-4 brightness-0 invert" />
               <p className="text-slate-400 text-sm leading-relaxed">
-                Professional home cleaning services in Orlando, FL. Trusted by thousands of families.
+                Professional home cleaning services in Orlando, FL. Reliable and thorough.
               </p>
             </div>
             <div>
