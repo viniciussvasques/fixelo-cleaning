@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Session } from 'next-auth';
+
+// Define auth type for mocking
+type AuthFunction = () => Promise<Session | null>;
 
 // Mock the database
 vi.mock('@fixelo/database', () => ({
@@ -18,7 +22,7 @@ vi.mock('@fixelo/database', () => ({
             create: vi.fn(),
             update: vi.fn(),
         },
-        $transaction: vi.fn((callback) => callback({
+        $transaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({
             booking: {
                 updateMany: vi.fn().mockResolvedValue({ count: 1 }),
             },
@@ -34,7 +38,7 @@ vi.mock('@fixelo/database', () => ({
 
 // Mock auth
 vi.mock('@/lib/auth', () => ({
-    auth: vi.fn(),
+    auth: vi.fn() as unknown as AuthFunction,
 }));
 
 describe('Cleaner Jobs API', () => {
@@ -46,11 +50,12 @@ describe('Cleaner Jobs API', () => {
         it('should return available jobs for cleaner', async () => {
             const { auth } = await import('@/lib/auth');
             const { prisma } = await import('@fixelo/database');
+            const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
-            vi.mocked(auth).mockResolvedValue({
+            mockAuth.mockResolvedValue({
                 user: { id: 'cleaner-1', email: 'cleaner@example.com', role: 'CLEANER' },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            } as never);
+            });
 
             const availableJobs = [
                 {
@@ -82,11 +87,12 @@ describe('Cleaner Jobs API', () => {
 
         it('should verify cleaner role', async () => {
             const { auth } = await import('@/lib/auth');
+            const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
-            vi.mocked(auth).mockResolvedValue({
+            mockAuth.mockResolvedValue({
                 user: { id: 'cleaner-1', email: 'cleaner@example.com', role: 'CLEANER' },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            } as never);
+            });
 
             const session = await auth();
             expect(session?.user.role).toBe('CLEANER');

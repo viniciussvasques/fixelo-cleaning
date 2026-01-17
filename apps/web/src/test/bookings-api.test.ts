@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Session } from 'next-auth';
+
+// Define auth type for mocking  
+type AuthFunction = () => Promise<Session | null>;
 
 // Mock the database
 vi.mock('@fixelo/database', () => ({
@@ -22,7 +26,7 @@ vi.mock('@fixelo/database', () => ({
 
 // Mock auth
 vi.mock('@/lib/auth', () => ({
-    auth: vi.fn(),
+    auth: vi.fn() as unknown as AuthFunction,
 }));
 
 describe('Booking API', () => {
@@ -34,11 +38,12 @@ describe('Booking API', () => {
         it('should return list of bookings for authenticated user', async () => {
             const { auth } = await import('@/lib/auth');
             const { prisma } = await import('@fixelo/database');
+            const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
-            vi.mocked(auth).mockResolvedValue({
+            mockAuth.mockResolvedValue({
                 user: { id: 'user-1', email: 'test@example.com', role: 'CUSTOMER' },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            } as never);
+            });
 
             vi.mocked(prisma.booking.findMany).mockResolvedValue([
                 {
@@ -64,7 +69,9 @@ describe('Booking API', () => {
 
         it('should reject unauthenticated requests', async () => {
             const { auth } = await import('@/lib/auth');
-            vi.mocked(auth).mockResolvedValue(null);
+            const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
+
+            mockAuth.mockResolvedValue(null);
 
             const session = await auth();
             expect(session).toBeNull();

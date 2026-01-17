@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { sendEmail, sendEmailNotification, clearEmailConfigCache } from './email';
+import type { Transporter } from 'nodemailer';
 
-// Mock nodemailer
+// Type for mock transporter
+interface MockTransporter {
+    sendMail: ReturnType<typeof vi.fn>;
+}
+
+// Mock nodemailer with proper types
+const mockSendMail = vi.fn();
+const mockCreateTransport = vi.fn((): MockTransporter => ({
+    sendMail: mockSendMail,
+}));
+
 vi.mock('nodemailer', () => ({
     default: {
-        createTransport: vi.fn(() => ({
-            sendMail: vi.fn().mockResolvedValue({ messageId: 'test-message-id' }),
-        })),
+        createTransport: mockCreateTransport,
     },
 }));
 
@@ -30,11 +38,14 @@ vi.mock('@fixelo/database', () => ({
 describe('Email Library', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        clearEmailConfigCache();
+        mockSendMail.mockResolvedValue({ messageId: 'test-message-id' });
     });
 
     describe('sendEmail', () => {
         it('should send email successfully', async () => {
+            const { sendEmail, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
+
             const result = await sendEmail({
                 to: 'test@example.com',
                 subject: 'Test Subject',
@@ -42,9 +53,14 @@ describe('Email Library', () => {
             });
 
             expect(result).toBe(true);
+            expect(mockCreateTransport).toHaveBeenCalled();
+            expect(mockSendMail).toHaveBeenCalled();
         });
 
         it('should send email with text content', async () => {
+            const { sendEmail, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
+
             const result = await sendEmail({
                 to: 'test@example.com',
                 subject: 'Test Subject',
@@ -55,6 +71,9 @@ describe('Email Library', () => {
         });
 
         it('should use custom from address', async () => {
+            const { sendEmail, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
+
             const result = await sendEmail({
                 to: 'test@example.com',
                 subject: 'Test Subject',
@@ -66,10 +85,10 @@ describe('Email Library', () => {
         });
 
         it('should throw error when email fails', async () => {
-            const nodemailer = await import('nodemailer');
-            vi.mocked(nodemailer.default.createTransport).mockReturnValue({
-                sendMail: vi.fn().mockRejectedValue(new Error('SMTP Error')),
-            } as ReturnType<typeof nodemailer.default.createTransport>);
+            mockSendMail.mockRejectedValueOnce(new Error('SMTP Error'));
+
+            const { sendEmail, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
 
             await expect(sendEmail({
                 to: 'test@example.com',
@@ -82,11 +101,10 @@ describe('Email Library', () => {
     describe('sendEmailNotification', () => {
         it('should send email and create notification record', async () => {
             const { prisma } = await import('@fixelo/database');
-            const nodemailer = await import('nodemailer');
+            const { sendEmailNotification, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
 
-            vi.mocked(nodemailer.default.createTransport).mockReturnValue({
-                sendMail: vi.fn().mockResolvedValue({ messageId: 'msg-1' }),
-            } as ReturnType<typeof nodemailer.default.createTransport>);
+            mockSendMail.mockResolvedValueOnce({ messageId: 'msg-1' });
 
             await sendEmailNotification('user-123', {
                 to: 'user@example.com',
@@ -107,11 +125,10 @@ describe('Email Library', () => {
 
         it('should create failed notification when email fails', async () => {
             const { prisma } = await import('@fixelo/database');
-            const nodemailer = await import('nodemailer');
+            const { sendEmailNotification, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
 
-            vi.mocked(nodemailer.default.createTransport).mockReturnValue({
-                sendMail: vi.fn().mockRejectedValue(new Error('Failed to send')),
-            } as ReturnType<typeof nodemailer.default.createTransport>);
+            mockSendMail.mockRejectedValueOnce(new Error('Failed to send'));
 
             await sendEmailNotification('user-123', {
                 to: 'user@example.com',
@@ -131,11 +148,10 @@ describe('Email Library', () => {
 
         it('should include metadata in notification', async () => {
             const { prisma } = await import('@fixelo/database');
-            const nodemailer = await import('nodemailer');
+            const { sendEmailNotification, clearEmailConfigCache } = await import('./email');
+            clearEmailConfigCache();
 
-            vi.mocked(nodemailer.default.createTransport).mockReturnValue({
-                sendMail: vi.fn().mockResolvedValue({ messageId: 'msg-2' }),
-            } as ReturnType<typeof nodemailer.default.createTransport>);
+            mockSendMail.mockResolvedValueOnce({ messageId: 'msg-2' });
 
             await sendEmailNotification(
                 'user-123',
@@ -158,7 +174,8 @@ describe('Email Library', () => {
     });
 
     describe('clearEmailConfigCache', () => {
-        it('should not throw when clearing cache', () => {
+        it('should not throw when clearing cache', async () => {
+            const { clearEmailConfigCache } = await import('./email');
             expect(() => clearEmailConfigCache()).not.toThrow();
         });
     });

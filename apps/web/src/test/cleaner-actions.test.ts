@@ -1,4 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { Session } from 'next-auth';
+
+// Define auth type for mocking
+type AuthFunction = () => Promise<Session | null>;
 
 // Mock modules before test
 vi.mock('@fixelo/database', () => ({
@@ -11,7 +15,7 @@ vi.mock('@fixelo/database', () => ({
 }));
 
 vi.mock('@/lib/auth', () => ({
-    auth: vi.fn(),
+    auth: vi.fn() as unknown as AuthFunction,
 }));
 
 vi.mock('@/lib/metrics', () => ({
@@ -34,12 +38,12 @@ describe('Cleaner Actions', () => {
         it('should verify cleaner profile exists', async () => {
             const { auth } = await import('@/lib/auth');
             const { prisma } = await import('@fixelo/database');
+            const mockAuth = auth as unknown as ReturnType<typeof vi.fn>;
 
-            // Setup: authenticated cleaner
-            vi.mocked(auth).mockResolvedValue({
+            mockAuth.mockResolvedValue({
                 user: { id: 'cleaner-1', role: UserRole.CLEANER },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            } as never);
+            });
 
             vi.mocked(prisma.cleanerProfile.findUnique).mockResolvedValue({
                 id: 'profile-1',
@@ -59,13 +63,12 @@ describe('Cleaner Actions', () => {
         it('should use atomic update to prevent race conditions', async () => {
             const { prisma } = await import('@fixelo/database');
 
-            // Setup: updateMany returns 1 (successful atomic update)
             vi.mocked(prisma.booking.updateMany).mockResolvedValue({ count: 1 });
 
             const result = await prisma.booking.updateMany({
                 where: {
                     id: 'booking-1',
-                    status: 'PENDING', // Only update if still PENDING
+                    status: 'PENDING',
                 },
                 data: {
                     status: 'ASSIGNED',
@@ -78,7 +81,6 @@ describe('Cleaner Actions', () => {
         it('should detect race condition when job already taken', async () => {
             const { prisma } = await import('@fixelo/database');
 
-            // Setup: updateMany returns 0 (job was already taken)
             vi.mocked(prisma.booking.updateMany).mockResolvedValue({ count: 0 });
 
             const result = await prisma.booking.updateMany({
@@ -91,7 +93,6 @@ describe('Cleaner Actions', () => {
                 },
             });
 
-            // Count 0 means the job was already taken by another cleaner
             expect(result.count).toBe(0);
         });
 
@@ -110,7 +111,7 @@ describe('Cleaner Actions', () => {
                     bookingId: 'booking-1',
                     cleanerId: 'cleaner-1',
                     status: 'ASSIGNED',
-                },
+                } as never,
             });
 
             expect(assignment.id).toBe('assignment-1');
@@ -129,7 +130,7 @@ describe('Cleaner Actions', () => {
                     status: 'PENDING',
                 },
                 data: {
-                    status: 'PENDING', // Back to pending for other cleaners
+                    status: 'PENDING',
                 },
             });
 
