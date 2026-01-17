@@ -38,7 +38,7 @@ describe('Booking API', () => {
             vi.mocked(auth).mockResolvedValue({
                 user: { id: 'user-1', email: 'test@example.com', role: 'CUSTOMER' },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            });
+            } as never);
 
             vi.mocked(prisma.booking.findMany).mockResolvedValue([
                 {
@@ -51,8 +51,8 @@ describe('Booking API', () => {
                     addressId: 'address-1',
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                } as never,
-            ]);
+                },
+            ] as never);
 
             const bookings = await prisma.booking.findMany({
                 where: { userId: 'user-1' },
@@ -73,13 +73,7 @@ describe('Booking API', () => {
 
     describe('POST /api/bookings', () => {
         it('should create a new booking', async () => {
-            const { auth } = await import('@/lib/auth');
             const { prisma } = await import('@fixelo/database');
-
-            vi.mocked(auth).mockResolvedValue({
-                user: { id: 'user-1', email: 'test@example.com', role: 'CUSTOMER' },
-                expires: new Date(Date.now() + 3600000).toISOString(),
-            });
 
             const newBooking = {
                 id: 'booking-new',
@@ -96,14 +90,7 @@ describe('Booking API', () => {
             vi.mocked(prisma.booking.create).mockResolvedValue(newBooking as never);
 
             const result = await prisma.booking.create({
-                data: {
-                    userId: 'user-1',
-                    serviceTypeId: 'service-1',
-                    addressId: 'address-1',
-                    scheduledDate: new Date(),
-                    totalAmount: 169,
-                    status: 'PENDING',
-                },
+                data: newBooking as never,
             });
 
             expect(result.id).toBe('booking-new');

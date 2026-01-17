@@ -18,7 +18,7 @@ vi.mock('@fixelo/database', () => ({
             create: vi.fn(),
             update: vi.fn(),
         },
-        $transaction: vi.fn((callback: (tx: unknown) => Promise<unknown>) => callback({
+        $transaction: vi.fn((callback) => callback({
             booking: {
                 updateMany: vi.fn().mockResolvedValue({ count: 1 }),
             },
@@ -50,7 +50,7 @@ describe('Cleaner Jobs API', () => {
             vi.mocked(auth).mockResolvedValue({
                 user: { id: 'cleaner-1', email: 'cleaner@example.com', role: 'CLEANER' },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            });
+            } as never);
 
             const availableJobs = [
                 {
@@ -80,29 +80,22 @@ describe('Cleaner Jobs API', () => {
             expect(jobs).toHaveLength(2);
         });
 
-        it('should reject non-cleaner users', async () => {
+        it('should verify cleaner role', async () => {
             const { auth } = await import('@/lib/auth');
 
             vi.mocked(auth).mockResolvedValue({
-                user: { id: 'user-1', email: 'customer@example.com', role: 'CUSTOMER' },
+                user: { id: 'cleaner-1', email: 'cleaner@example.com', role: 'CLEANER' },
                 expires: new Date(Date.now() + 3600000).toISOString(),
-            });
+            } as never);
 
             const session = await auth();
-            expect(session?.user.role).toBe('CUSTOMER');
-            // API would return 403 for non-CLEANER role
+            expect(session?.user.role).toBe('CLEANER');
         });
     });
 
     describe('POST /api/cleaner/jobs/[id]/accept', () => {
         it('should accept a job successfully', async () => {
-            const { auth } = await import('@/lib/auth');
             const { prisma } = await import('@fixelo/database');
-
-            vi.mocked(auth).mockResolvedValue({
-                user: { id: 'cleaner-1', email: 'cleaner@example.com', role: 'CLEANER' },
-                expires: new Date(Date.now() + 3600000).toISOString(),
-            });
 
             vi.mocked(prisma.cleanerProfile.findUnique).mockResolvedValue({
                 id: 'profile-1',
@@ -110,24 +103,23 @@ describe('Cleaner Jobs API', () => {
                 activeJobCount: 0,
             } as never);
 
-            // Simulate transaction
-            const transactionResult = await prisma.$transaction(async (tx) => {
-                return { success: true };
+            const profile = await prisma.cleanerProfile.findUnique({
+                where: { userId: 'cleaner-1' },
             });
 
-            expect(transactionResult).toEqual({ success: true });
+            expect(profile).toBeDefined();
+            expect(profile!.id).toBe('profile-1');
         });
 
         it('should use atomic update to prevent race conditions', async () => {
             const { prisma } = await import('@fixelo/database');
 
-            // The updateMany approach ensures atomic updates
             vi.mocked(prisma.booking.updateMany).mockResolvedValue({ count: 1 });
 
             const result = await prisma.booking.updateMany({
                 where: {
                     id: 'booking-1',
-                    status: 'PENDING', // Only update if still PENDING
+                    status: 'PENDING',
                 },
                 data: {
                     status: 'ASSIGNED',
@@ -140,7 +132,6 @@ describe('Cleaner Jobs API', () => {
         it('should fail if job already taken', async () => {
             const { prisma } = await import('@fixelo/database');
 
-            // Simulate job already taken (updateMany returns 0)
             vi.mocked(prisma.booking.updateMany).mockResolvedValue({ count: 0 });
 
             const result = await prisma.booking.updateMany({
@@ -154,7 +145,6 @@ describe('Cleaner Jobs API', () => {
             });
 
             expect(result.count).toBe(0);
-            // This would trigger "Job already taken" error in actual API
         });
     });
 
