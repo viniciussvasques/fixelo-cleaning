@@ -13,6 +13,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { sendEmailNotification } from "@/lib/email";
 import { sendSMSNotification } from "@/lib/sms";
+import { CleanerDocumentsViewer } from "@/components/admin/cleaner-documents-viewer";
 
 async function approveCleaner(id: string) {
     'use server';
@@ -308,130 +309,15 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
                             Verification Documents
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        {/* Profile Photo */}
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <User className="w-5 h-5 text-slate-400" />
-                                <div>
-                                    <p className="font-medium">Profile Photo</p>
-                                    <p className="text-xs text-muted-foreground">Cleaner's face photo</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {cleaner.profileImage ? (
-                                    <>
-                                        <Badge className="bg-green-100 text-green-800">Uploaded</Badge>
-                                        <a
-                                            href={cleaner.profileImage}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline font-medium"
-                                        >
-                                            View
-                                        </a>
-                                    </>
-                                ) : (
-                                    <Badge variant="outline">Missing</Badge>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Photo ID Front */}
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-slate-400" />
-                                <div>
-                                    <p className="font-medium">Photo ID - Front</p>
-                                    <p className="text-xs text-muted-foreground">{cleaner.photoIdType || 'Not specified'}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {cleaner.idDocumentUrl ? (
-                                    <>
-                                        <Badge className="bg-green-100 text-green-800">Uploaded</Badge>
-                                        <a
-                                            href={cleaner.idDocumentUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline font-medium"
-                                        >
-                                            View
-                                        </a>
-                                    </>
-                                ) : (
-                                    <Badge variant="outline">Missing</Badge>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Photo ID Back */}
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-slate-400" />
-                                <div>
-                                    <p className="font-medium">Photo ID - Back</p>
-                                    <p className="text-xs text-muted-foreground">Reverse side of ID</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {cleaner.photoIdBackUrl ? (
-                                    <>
-                                        <Badge className="bg-green-100 text-green-800">Uploaded</Badge>
-                                        <a
-                                            href={cleaner.photoIdBackUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline font-medium"
-                                        >
-                                            View
-                                        </a>
-                                    </>
-                                ) : (
-                                    <Badge variant="outline">Missing</Badge>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Insurance */}
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <Shield className="w-5 h-5 text-slate-400" />
-                                <div>
-                                    <p className="font-medium">Insurance</p>
-                                    <p className="text-xs text-muted-foreground">Liability coverage</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {cleaner.insuranceDocUrl ? (
-                                    <>
-                                        <Badge className="bg-green-100 text-green-800">Verified</Badge>
-                                        <a
-                                            href={cleaner.insuranceDocUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-sm text-blue-600 hover:underline font-medium"
-                                        >
-                                            View
-                                        </a>
-                                    </>
-                                ) : (
-                                    <Badge variant="outline">Not provided</Badge>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Background Check */}
-                        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                                <Shield className="w-5 h-5 text-slate-400" />
-                                <div>
-                                    <p className="font-medium">Background Check</p>
-                                    <p className="text-xs text-muted-foreground">Criminal history</p>
-                                </div>
-                            </div>
-                            <Badge variant="outline">{cleaner.backgroundCheckStatus || 'Not run'}</Badge>
-                        </div>
+                    <CardContent>
+                        <CleanerDocumentsViewer
+                            profileImage={cleaner.profileImage}
+                            idDocumentUrl={cleaner.idDocumentUrl}
+                            photoIdBackUrl={cleaner.photoIdBackUrl}
+                            insuranceDocUrl={cleaner.insuranceDocUrl}
+                            photoIdType={cleaner.photoIdType}
+                            backgroundCheckStatus={cleaner.backgroundCheckStatus}
+                        />
                     </CardContent>
                 </Card>
 

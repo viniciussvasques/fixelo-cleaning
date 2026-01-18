@@ -50,7 +50,7 @@ async function getEmailConfig(): Promise<EmailConfig> {
       port: parseInt(configMap.get('smtp_port') || process.env.SMTP_PORT || '587'),
       user: configMap.get('smtp_user') || process.env.SMTP_USER || 'no-reply@fixelo.app',
       password: configMap.get('smtp_password') || process.env.SMTP_PASSWORD || '',
-      from: configMap.get('email_from') || process.env.SMTP_FROM || 'no-reply@fixelo.app',
+      from: configMap.get('email_from') || process.env.SMTP_FROM || 'Fixelo <no-reply@fixelo.app>',
     };
 
     cachedEmailConfig = config;
@@ -65,7 +65,7 @@ async function getEmailConfig(): Promise<EmailConfig> {
       port: parseInt(process.env.SMTP_PORT || '587'),
       user: process.env.SMTP_USER || 'no-reply@fixelo.app',
       password: process.env.SMTP_PASSWORD || '',
-      from: process.env.SMTP_FROM || 'no-reply@fixelo.app',
+      from: process.env.SMTP_FROM || 'Fixelo <no-reply@fixelo.app>',
     };
 
     cachedEmailConfig = config;
