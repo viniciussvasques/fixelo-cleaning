@@ -15,6 +15,7 @@ import { sendEmailNotification } from "@/lib/email";
 import { sendSMSNotification } from "@/lib/sms";
 import { CleanerDocumentsViewerEnhanced } from "@/components/admin/cleaner-documents-viewer";
 import { EmailHistory } from "@/components/admin/email-history";
+import { DocumentComparison } from "@/components/admin/document-comparison";
 
 
 async function approveCleaner(id: string) {
@@ -341,10 +342,18 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
                 {/* Documents */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <FileText className="w-5 h-5" />
-                            Verification Documents
-                        </CardTitle>
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2">
+                                <FileText className="w-5 h-5" />
+                                Verification Documents
+                            </CardTitle>
+                            <DocumentComparison
+                                profileImage={cleaner.profileImage}
+                                idDocumentUrl={cleaner.idDocumentUrl}
+                                cleanerName={`${cleaner.user.firstName} ${cleaner.user.lastName}`}
+                            />
+                        </div>
+                        <CardDescription>Compare selfie with ID photo for identity verification</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <CleanerDocumentsViewerEnhanced
