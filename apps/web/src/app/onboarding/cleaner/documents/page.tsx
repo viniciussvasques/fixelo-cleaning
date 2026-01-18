@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,7 +21,7 @@ export default function DocumentsStep() {
                 formData.append('insuranceDoc', insuranceDoc);
             }
 
-            const response = await fetch('/api/onboarding/cleaner/documents', {
+            const response = await fetch('/api/cleaner/onboarding/documents', {
                 method: 'POST',
                 body: formData,
             });

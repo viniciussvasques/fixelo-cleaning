@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -69,7 +69,7 @@ export default function AccountStep() {
     const onSubmit = async (data: AccountFormData) => {
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/onboarding/cleaner/account', {
+            const response = await fetch('/api/cleaner/onboarding/account', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),

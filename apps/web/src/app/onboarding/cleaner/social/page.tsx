@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -56,7 +56,7 @@ export default function SocialStep() {
     const onSubmit = async (data: SocialFormData) => {
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/onboarding/cleaner/social', {
+            const response = await fetch('/api/cleaner/onboarding/social', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -98,7 +98,7 @@ export default function IdentityStep() {
             formData.append('idDocumentBack', idDocumentBack);
             formData.append('profilePhoto', profilePhoto);
 
-            const response = await fetch('/api/onboarding/cleaner/identity', {
+            const response = await fetch('/api/cleaner/onboarding/identity', {
                 method: 'POST',
                 body: formData,
             });

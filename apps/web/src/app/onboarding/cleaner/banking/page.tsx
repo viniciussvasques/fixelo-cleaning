@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -51,7 +51,7 @@ export default function BankingStep() {
     const handleSubmitApplication = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch('/api/onboarding/cleaner/submit', {
+            const response = await fetch('/api/cleaner/onboarding/submit', {
                 method: 'POST',
             });
 
