@@ -31,6 +31,8 @@ function SignUpPageContent() {
     const [isLoading, setIsLoading] = useState(false);
 
     const callbackUrl = searchParams.get('callbackUrl') || '';
+    const roleParam = searchParams.get('role')?.toUpperCase();
+    const initialRole = roleParam === 'CLEANER' ? 'CLEANER' : 'CUSTOMER';
 
     const {
         register,
@@ -40,7 +42,7 @@ function SignUpPageContent() {
     } = useForm<SignupFormData>({
         resolver: zodResolver(signupSchema),
         defaultValues: {
-            role: 'CUSTOMER',
+            role: initialRole,
         },
     });
 

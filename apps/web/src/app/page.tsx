@@ -62,7 +62,7 @@ export default function HomePage() {
               <Link href="#how-it-works" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
                 How It Works
               </Link>
-              <Link href="/become-a-pro" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
+              <Link href="/auth/signup?role=cleaner" className="text-slate-600 hover:text-blue-600 font-medium transition-colors">
                 Become a Pro
               </Link>
             </div>
@@ -70,7 +70,7 @@ export default function HomePage() {
             <div className="flex items-center gap-3 sm:gap-4">
               {/* Mobile: Become a Pro link */}
               <Link
-                href="/become-a-pro"
+                href="/auth/signup?role=cleaner"
                 className="lg:hidden text-emerald-600 hover:text-emerald-700 font-medium transition-colors text-sm"
               >
                 <span className="flex items-center gap-1">
