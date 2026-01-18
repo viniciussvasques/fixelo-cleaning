@@ -34,6 +34,9 @@ function SignUpPageContent() {
     const roleParam = searchParams.get('role')?.toUpperCase();
     const initialRole = roleParam === 'CLEANER' ? 'CLEANER' : 'CUSTOMER';
 
+    // If role=cleaner in URL, lock it so users can't accidentally switch to customer
+    const isRoleLocked = roleParam === 'CLEANER';
+
     const {
         register,
         handleSubmit,
@@ -103,15 +106,34 @@ function SignUpPageContent() {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-md w-full space-y-8">
                 <div>
-                    <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
-                        Create your Fixelo account
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        Already have an account?{' '}
-                        <Link href="/auth/signin" className="font-medium text-blue-600 hover:text-blue-500">
-                            Sign in
-                        </Link>
-                    </p>
+                    {isRoleLocked ? (
+                        <>
+                            <div className="flex justify-center mb-4">
+                                <span className="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                                    <Briefcase className="w-4 h-4" />
+                                    Pro Registration
+                                </span>
+                            </div>
+                            <h2 className="text-center text-3xl font-bold text-gray-900">
+                                Become a Fixelo Pro
+                            </h2>
+                            <p className="mt-2 text-center text-sm text-gray-600">
+                                Join our network of professional cleaners and start earning!
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+                                Create your Fixelo account
+                            </h2>
+                            <p className="mt-2 text-center text-sm text-gray-600">
+                                Already have an account?{' '}
+                                <Link href="/auth/signin" className="font-medium text-blue-600 hover:text-blue-500">
+                                    Sign in
+                                </Link>
+                            </p>
+                        </>
+                    )}
                 </div>
 
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -121,56 +143,60 @@ function SignUpPageContent() {
                         </div>
                     )}
 
-                    {/* Role Selection */}
-                    <div className="space-y-3">
-                        <label className="block text-sm font-medium text-gray-700">
-                            I want to:
-                        </label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <label
-                                className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedRole === 'CUSTOMER'
-                                    ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                            >
-                                <input
-                                    {...register('role')}
-                                    type="radio"
-                                    value="CUSTOMER"
-                                    className="sr-only"
-                                />
-                                <div className="text-center">
-                                    <User className={`w-8 h-8 mx-auto mb-2 ${selectedRole === 'CUSTOMER' ? 'text-blue-600' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${selectedRole === 'CUSTOMER' ? 'text-blue-600' : 'text-gray-700'}`}>
-                                        Book cleaning
-                                    </span>
-                                </div>
+                    {/* Role Selection - Only show if not locked */}
+                    {isRoleLocked ? (
+                        <input type="hidden" {...register('role')} value="CLEANER" />
+                    ) : (
+                        <div className="space-y-3">
+                            <label className="block text-sm font-medium text-gray-700">
+                                I want to:
                             </label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <label
+                                    className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedRole === 'CUSTOMER'
+                                        ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-200'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <input
+                                        {...register('role')}
+                                        type="radio"
+                                        value="CUSTOMER"
+                                        className="sr-only"
+                                    />
+                                    <div className="text-center">
+                                        <User className={`w-8 h-8 mx-auto mb-2 ${selectedRole === 'CUSTOMER' ? 'text-blue-600' : 'text-gray-400'}`} />
+                                        <span className={`text-sm font-medium ${selectedRole === 'CUSTOMER' ? 'text-blue-600' : 'text-gray-700'}`}>
+                                            Book cleaning
+                                        </span>
+                                    </div>
+                                </label>
 
-                            <label
-                                className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedRole === 'CLEANER'
-                                    ? 'border-green-600 bg-green-50 ring-2 ring-green-200'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                            >
-                                <input
-                                    {...register('role')}
-                                    type="radio"
-                                    value="CLEANER"
-                                    className="sr-only"
-                                />
-                                <div className="text-center">
-                                    <Briefcase className={`w-8 h-8 mx-auto mb-2 ${selectedRole === 'CLEANER' ? 'text-green-600' : 'text-gray-400'}`} />
-                                    <span className={`text-sm font-medium ${selectedRole === 'CLEANER' ? 'text-green-600' : 'text-gray-700'}`}>
-                                        Become a Pro
-                                    </span>
-                                </div>
-                            </label>
+                                <label
+                                    className={`relative flex items-center justify-center p-4 border-2 rounded-xl cursor-pointer transition-all ${selectedRole === 'CLEANER'
+                                        ? 'border-green-600 bg-green-50 ring-2 ring-green-200'
+                                        : 'border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <input
+                                        {...register('role')}
+                                        type="radio"
+                                        value="CLEANER"
+                                        className="sr-only"
+                                    />
+                                    <div className="text-center">
+                                        <Briefcase className={`w-8 h-8 mx-auto mb-2 ${selectedRole === 'CLEANER' ? 'text-green-600' : 'text-gray-400'}`} />
+                                        <span className={`text-sm font-medium ${selectedRole === 'CLEANER' ? 'text-green-600' : 'text-gray-700'}`}>
+                                            Become a Pro
+                                        </span>
+                                    </div>
+                                </label>
+                            </div>
+                            {errors.role && (
+                                <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
+                            )}
                         </div>
-                        {errors.role && (
-                            <p className="mt-1 text-sm text-red-600">{errors.role.message}</p>
-                        )}
-                    </div>
+                    )}
 
                     <div className="rounded-md shadow-sm space-y-4">
                         <div className="grid grid-cols-2 gap-4">
