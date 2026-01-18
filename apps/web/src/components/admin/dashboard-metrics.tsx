@@ -10,14 +10,14 @@ export async function DashboardMetrics() {
         totalCleaners,
         activeCleaners,
         pendingCleaners,
-        rejectedCleaners,
+        suspendedCleaners,
         incompleteOnboarding,
     ] = await Promise.all([
         prisma.user.count(),
         prisma.cleanerProfile.count(),
         prisma.cleanerProfile.count({ where: { status: CleanerStatus.ACTIVE } }),
         prisma.cleanerProfile.count({ where: { status: CleanerStatus.PENDING_APPROVAL } }),
-        prisma.cleanerProfile.count({ where: { status: CleanerStatus.REJECTED } }),
+        prisma.cleanerProfile.count({ where: { status: { in: [CleanerStatus.SUSPENDED, CleanerStatus.DEACTIVATED] } } }),
         prisma.cleanerProfile.count({ where: { onboardingCompleted: false } }),
     ]);
 
@@ -56,8 +56,8 @@ export async function DashboardMetrics() {
             bgColor: "bg-orange-50",
         },
         {
-            title: "Rejected",
-            value: rejectedCleaners,
+            title: "Suspended",
+            value: suspendedCleaners,
             icon: XCircle,
             color: "text-red-600",
             bgColor: "bg-red-50",
