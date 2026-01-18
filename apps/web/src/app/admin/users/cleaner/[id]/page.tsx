@@ -159,6 +159,35 @@ async function requestDocumentResubmission(id: string, reason: string, documents
     revalidatePath(`/admin/users/cleaner/${id}`);
 }
 
+async function requestReEvaluation(id: string) {
+    'use server';
+    const cleaner = await prisma.cleanerProfile.update({
+        where: { id },
+        data: {
+            verificationStatus: 'UNDER_REVIEW',
+        },
+        include: {
+            user: true,
+        }
+    });
+
+    // Send notification email
+    await sendEmailNotification(cleaner.userId, {
+        to: cleaner.user.email,
+        subject: '📋 Account Review in Progress',
+        html: `
+            <h1>Hello ${cleaner.user.firstName},</h1>
+            <p>We are conducting a periodic review of your Fixelo Pro account.</p>
+            <p>As part of this review, we may request updated documents or information. Please ensure your profile and documents are up to date.</p>
+            <p>If we need any additional information, we'll contact you.</p>
+            <p>You can continue to use your account normally during this review.</p>
+            <p>Best regards,<br/>The Fixelo Team</p>
+        `,
+    }, { type: 'RE_EVALUATION' });
+
+    revalidatePath(`/admin/users/cleaner/${id}`);
+}
+
 export default async function CleanerReviewPage({ params }: { params: { id: string } }) {
     const cleaner = await prisma.cleanerProfile.findUnique({
         where: { id: params.id },
@@ -226,10 +255,16 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
                     <CheckCircle className="w-5 h-5 text-green-600" />
                     <span className="text-green-800 font-medium">Application Approved</span>
                     {cleaner.reviewedAt && (
-                        <span className="text-green-600 text-sm ml-auto">
+                        <span className="text-green-600 text-sm">
                             on {format(new Date(cleaner.reviewedAt), 'MMM d, yyyy')}
                         </span>
                     )}
+                    <form action={requestReEvaluation.bind(null, cleaner.id)} className="ml-auto">
+                        <Button variant="outline" type="submit" size="sm" className="text-purple-600 border-purple-200 hover:bg-purple-50">
+                            <Shield className="w-4 h-4 mr-1" />
+                            Request Re-Evaluation
+                        </Button>
+                    </form>
                 </div>
             )}
 
