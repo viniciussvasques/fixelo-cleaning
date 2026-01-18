@@ -196,6 +196,8 @@ model CleanerProfile {
   
   // Verification Docs
   idDocumentUrl         String?
+  photoIdBackUrl        String?        // Back of ID document
+  profileImage          String?        // Profile photo URL
   photoIdType           String?        // 'DRIVERS_LICENSE', 'PASSPORT', 'STATE_ID'
   selfieVerificationUrl String?
   selfieVerified        Boolean        @default(false)

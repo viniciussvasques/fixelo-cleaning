@@ -29,7 +29,9 @@ export async function POST(req: Request) {
         const taxIdType = formData.get('taxIdType') as string;
         const taxIdValue = formData.get('taxIdValue') as string;
         const photoIdType = formData.get('photoIdType') as string;
-        const idDocument = formData.get('idDocument') as File | null;
+        const idDocumentFront = formData.get('idDocumentFront') as File | null;
+        const idDocumentBack = formData.get('idDocumentBack') as File | null;
+        const profilePhoto = formData.get('profilePhoto') as File | null;
 
         // Validate with Zod
         const validation = identitySchema.safeParse({
@@ -63,9 +65,23 @@ export async function POST(req: Request) {
             );
         }
 
-        if (!idDocument) {
+        if (!idDocumentFront) {
             return NextResponse.json(
-                { error: { code: 'MISSING_DOCUMENT', message: 'ID document is required', field: 'idDocument' } },
+                { error: { code: 'MISSING_DOCUMENT', message: 'ID document front is required', field: 'idDocumentFront' } },
+                { status: 400 }
+            );
+        }
+
+        if (!idDocumentBack) {
+            return NextResponse.json(
+                { error: { code: 'MISSING_DOCUMENT', message: 'ID document back is required', field: 'idDocumentBack' } },
+                { status: 400 }
+            );
+        }
+
+        if (!profilePhoto) {
+            return NextResponse.json(
+                { error: { code: 'MISSING_DOCUMENT', message: 'Profile photo is required', field: 'profilePhoto' } },
                 { status: 400 }
             );
         }
@@ -81,16 +97,20 @@ export async function POST(req: Request) {
             );
         }
 
-        // TODO: In production, upload document to S3/Cloudinary and store URL
-        // For MVP, we store a placeholder URL
-        const idDocumentUrl = `/uploads/placeholder-id-${profile.id}.pdf`;
+        // TODO: In production, upload documents to S3/Cloudinary and store URLs
+        // For MVP, we store placeholder URLs
+        const idDocumentFrontUrl = `/uploads/id-front-${profile.id}.${idDocumentFront.name.split('.').pop()}`;
+        const idDocumentBackUrl = `/uploads/id-back-${profile.id}.${idDocumentBack.name.split('.').pop()}`;
+        const profilePhotoUrl = `/uploads/profile-${profile.id}.${profilePhoto.name.split('.').pop()}`;
 
         // Prepare data based on tax ID type
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
             businessType,
             taxIdType,
             photoIdType,
-            idDocumentUrl,
+            idDocumentUrl: idDocumentFrontUrl,
+            photoIdBackUrl: idDocumentBackUrl,
+            profileImage: profilePhotoUrl,
             onboardingStep: 3,
         };
 

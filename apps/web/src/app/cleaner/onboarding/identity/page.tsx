@@ -39,7 +39,9 @@ type IdentityFormData = z.infer<typeof identitySchema>;
 export default function IdentityStep() {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [idDocument, setIdDocument] = useState<File | null>(null);
+    const [idDocumentFront, setIdDocumentFront] = useState<File | null>(null);
+    const [idDocumentBack, setIdDocumentBack] = useState<File | null>(null);
+    const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
     const [businessType, setBusinessType] = useState<'INDIVIDUAL' | 'COMPANY'>('INDIVIDUAL');
 
     const {
@@ -71,8 +73,16 @@ export default function IdentityStep() {
     };
 
     const onSubmit = async (data: IdentityFormData) => {
-        if (!idDocument) {
-            toast.error('Please upload your ID document');
+        if (!idDocumentFront) {
+            toast.error('Please upload the FRONT of your ID document');
+            return;
+        }
+        if (!idDocumentBack) {
+            toast.error('Please upload the BACK of your ID document');
+            return;
+        }
+        if (!profilePhoto) {
+            toast.error('Please upload your profile photo');
             return;
         }
 
@@ -84,7 +94,9 @@ export default function IdentityStep() {
             formData.append('taxIdType', data.taxIdType);
             formData.append('taxIdValue', data.taxIdValue);
             formData.append('photoIdType', data.photoIdType);
-            formData.append('idDocument', idDocument);
+            formData.append('idDocumentFront', idDocumentFront);
+            formData.append('idDocumentBack', idDocumentBack);
+            formData.append('profilePhoto', profilePhoto);
 
             const response = await fetch('/api/cleaner/onboarding/identity', {
                 method: 'POST',
@@ -239,27 +251,91 @@ export default function IdentityStep() {
                     </Select>
                 </div>
 
-                {/* File Upload */}
+                {/* Profile Photo Upload */}
                 <div className="space-y-2">
-                    <Label>Upload ID Document</Label>
+                    <Label className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-blue-600" />
+                        Profile Photo <span className="text-red-500">*</span>
+                    </Label>
+                    <p className="text-xs text-slate-500">A clear photo of your face for customers to recognize you</p>
                     <div
-                        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${idDocument ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-blue-300'
+                        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${profilePhoto ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-blue-300'
                             }`}
-                        onClick={() => document.getElementById('idUpload')?.click()}
+                        onClick={() => document.getElementById('profilePhotoUpload')?.click()}
                     >
                         <input
-                            id="idUpload"
+                            id="profilePhotoUpload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => setProfilePhoto(e.target.files?.[0] || null)}
+                        />
+                        <Upload className={`w-8 h-8 mx-auto mb-2 ${profilePhoto ? 'text-green-600' : 'text-slate-400'}`} />
+                        {profilePhoto ? (
+                            <p className="text-green-700 font-medium">{profilePhoto.name}</p>
+                        ) : (
+                            <>
+                                <p className="text-slate-600 font-medium">Upload your photo</p>
+                                <p className="text-xs text-slate-400">JPG or PNG (max 5MB)</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* ID Document Front */}
+                <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                        ID Document - FRONT <span className="text-red-500">*</span>
+                    </Label>
+                    <div
+                        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${idDocumentFront ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-blue-300'
+                            }`}
+                        onClick={() => document.getElementById('idUploadFront')?.click()}
+                    >
+                        <input
+                            id="idUploadFront"
                             type="file"
                             accept="image/*,.pdf"
                             className="hidden"
-                            onChange={(e) => setIdDocument(e.target.files?.[0] || null)}
+                            onChange={(e) => setIdDocumentFront(e.target.files?.[0] || null)}
                         />
-                        <Upload className={`w-8 h-8 mx-auto mb-2 ${idDocument ? 'text-green-600' : 'text-slate-400'}`} />
-                        {idDocument ? (
-                            <p className="text-green-700 font-medium">{idDocument.name}</p>
+                        <Upload className={`w-8 h-8 mx-auto mb-2 ${idDocumentFront ? 'text-green-600' : 'text-slate-400'}`} />
+                        {idDocumentFront ? (
+                            <p className="text-green-700 font-medium">{idDocumentFront.name}</p>
                         ) : (
                             <>
-                                <p className="text-slate-600 font-medium">Click to upload</p>
+                                <p className="text-slate-600 font-medium">Upload FRONT of ID</p>
+                                <p className="text-xs text-slate-400">JPG, PNG, or PDF (max 5MB)</p>
+                            </>
+                        )}
+                    </div>
+                </div>
+
+                {/* ID Document Back */}
+                <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                        <CreditCard className="w-4 h-4 text-blue-600" />
+                        ID Document - BACK <span className="text-red-500">*</span>
+                    </Label>
+                    <div
+                        className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${idDocumentBack ? 'border-green-500 bg-green-50' : 'border-slate-200 hover:border-blue-300'
+                            }`}
+                        onClick={() => document.getElementById('idUploadBack')?.click()}
+                    >
+                        <input
+                            id="idUploadBack"
+                            type="file"
+                            accept="image/*,.pdf"
+                            className="hidden"
+                            onChange={(e) => setIdDocumentBack(e.target.files?.[0] || null)}
+                        />
+                        <Upload className={`w-8 h-8 mx-auto mb-2 ${idDocumentBack ? 'text-green-600' : 'text-slate-400'}`} />
+                        {idDocumentBack ? (
+                            <p className="text-green-700 font-medium">{idDocumentBack.name}</p>
+                        ) : (
+                            <>
+                                <p className="text-slate-600 font-medium">Upload BACK of ID</p>
                                 <p className="text-xs text-slate-400">JPG, PNG, or PDF (max 5MB)</p>
                             </>
                         )}
