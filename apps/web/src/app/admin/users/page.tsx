@@ -7,6 +7,7 @@ import { CleanerStatus, UserRole, Prisma } from "@prisma/client";
 import { SendRemindersButton } from "@/components/admin/send-reminders-button";
 import { UsersFilters } from "@/components/admin/users-filters";
 import { Pagination } from "@/components/admin/pagination";
+import { DashboardMetrics } from "@/components/admin/dashboard-metrics";
 import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
@@ -81,6 +82,11 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+
+            {/* Dashboard Metrics */}
+            <Suspense fallback={<div className="grid gap-4 md:grid-cols-6"><div className="h-24 bg-slate-100 animate-pulse rounded-lg col-span-6" /></div>}>
+                <DashboardMetrics />
+            </Suspense>
 
             {/* Filters */}
             <Suspense fallback={<div className="h-32 bg-slate-100 animate-pulse rounded-lg" />}>
