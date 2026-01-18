@@ -13,7 +13,8 @@ import {
 import { revalidatePath } from "next/cache";
 import { sendEmailNotification } from "@/lib/email";
 import { sendSMSNotification } from "@/lib/sms";
-import { CleanerDocumentsViewer } from "@/components/admin/cleaner-documents-viewer";
+import { CleanerDocumentsViewerEnhanced } from "@/components/admin/cleaner-documents-viewer";
+
 
 async function approveCleaner(id: string) {
     'use server';
@@ -310,13 +311,18 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <CleanerDocumentsViewer
+                        <CleanerDocumentsViewerEnhanced
+                            cleanerId={cleaner.id}
+                            cleanerName={cleaner.user.firstName}
+                            cleanerEmail={cleaner.user.email}
                             profileImage={cleaner.profileImage}
                             idDocumentUrl={cleaner.idDocumentUrl}
                             photoIdBackUrl={cleaner.photoIdBackUrl}
                             insuranceDocUrl={cleaner.insuranceDocUrl}
                             photoIdType={cleaner.photoIdType}
                             backgroundCheckStatus={cleaner.backgroundCheckStatus}
+                            onboardingStep={cleaner.onboardingStep}
+                            onboardingCompleted={cleaner.onboardingCompleted}
                         />
                     </CardContent>
                 </Card>
