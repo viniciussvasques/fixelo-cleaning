@@ -9,7 +9,7 @@ export function CleanerLayoutWrapper({ children }: { children: React.ReactNode }
     const pathname = usePathname();
     
     // Don't show navigation on onboarding pages
-    const isOnboarding = pathname?.includes('/cleaner/onboarding');
+    const isOnboarding = pathname?.includes('/onboarding/cleaner');
 
     if (isOnboarding) {
         return <>{children}</>;

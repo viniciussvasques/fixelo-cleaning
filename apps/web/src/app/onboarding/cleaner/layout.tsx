@@ -6,11 +6,11 @@ import Image from 'next/image';
 import { CheckCircle, Circle, ArrowLeft } from 'lucide-react';
 
 const steps = [
-    { id: 1, name: 'Account', path: '/cleaner/onboarding/account' },
-    { id: 2, name: 'Identity', path: '/cleaner/onboarding/identity' },
-    { id: 3, name: 'Documents', path: '/cleaner/onboarding/documents' },
-    { id: 4, name: 'Social & References', path: '/cleaner/onboarding/social' },
-    { id: 5, name: 'Banking', path: '/cleaner/onboarding/banking' },
+    { id: 1, name: 'Account', path: '/onboarding/cleaner/account' },
+    { id: 2, name: 'Identity', path: '/onboarding/cleaner/identity' },
+    { id: 3, name: 'Documents', path: '/onboarding/cleaner/documents' },
+    { id: 4, name: 'Social & References', path: '/onboarding/cleaner/social' },
+    { id: 5, name: 'Banking', path: '/onboarding/cleaner/banking' },
 ];
 
 export default function OnboardingLayout({

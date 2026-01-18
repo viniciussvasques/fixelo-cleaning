@@ -69,7 +69,7 @@ export default function AccountStep() {
     const onSubmit = async (data: AccountFormData) => {
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/cleaner/onboarding/account', {
+            const response = await fetch('/api/onboarding/cleaner/account', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
@@ -81,7 +81,7 @@ export default function AccountStep() {
             }
 
             toast.success('Account information saved!');
-            router.push('/cleaner/onboarding/identity');
+            router.push('/onboarding/cleaner/identity');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Something went wrong');
         } finally {

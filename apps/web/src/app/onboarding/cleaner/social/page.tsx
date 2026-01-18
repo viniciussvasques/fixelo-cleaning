@@ -56,7 +56,7 @@ export default function SocialStep() {
     const onSubmit = async (data: SocialFormData) => {
         setIsSubmitting(true);
         try {
-            const response = await fetch('/api/cleaner/onboarding/social', {
+            const response = await fetch('/api/onboarding/cleaner/social', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),
@@ -68,7 +68,7 @@ export default function SocialStep() {
             }
 
             toast.success('Social information saved!');
-            router.push('/cleaner/onboarding/banking');
+            router.push('/onboarding/cleaner/banking');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Something went wrong');
         } finally {
@@ -184,7 +184,7 @@ export default function SocialStep() {
                         type="button"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => router.push('/cleaner/onboarding/documents')}
+                        onClick={() => router.push('/onboarding/cleaner/documents')}
                     >
                         Back
                     </Button>

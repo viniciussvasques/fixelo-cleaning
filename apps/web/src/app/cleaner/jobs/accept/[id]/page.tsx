@@ -45,7 +45,7 @@ export default async function AcceptBookingPage({ params }: PageProps) {
     });
 
     if (!cleaner || cleaner.status !== 'ACTIVE') {
-        redirect("/cleaner/onboarding");
+        redirect("/onboarding/cleaner");
     }
 
     const booking = await prisma.booking.findUnique({

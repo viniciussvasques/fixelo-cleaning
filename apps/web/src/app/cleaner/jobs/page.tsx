@@ -23,7 +23,7 @@ export default async function JobsPage() {
                 <Briefcase className="w-16 h-16 text-gray-300 mb-4" />
                 <h2 className="text-xl font-bold mb-2">Complete Your Profile</h2>
                 <p className="text-gray-500 mb-4">You need to complete onboarding first.</p>
-                <Link href="/cleaner/onboarding" className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium">
+                <Link href="/onboarding/cleaner" className="bg-green-600 text-white px-6 py-2 rounded-lg font-medium">
                     Start Onboarding
                 </Link>
             </div>

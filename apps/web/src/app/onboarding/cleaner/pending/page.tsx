@@ -16,7 +16,7 @@ export default async function PendingPage() {
     });
 
     if (!profile) {
-        redirect('/cleaner/onboarding');
+        redirect('/onboarding/cleaner');
     }
 
     // If approved, redirect to dashboard
@@ -71,7 +71,7 @@ export default async function PendingPage() {
 
             {profile.verificationStatus === 'DOCUMENTS_NEEDED' && (
                 <Link
-                    href="/cleaner/onboarding/identity"
+                    href="/onboarding/cleaner/identity"
                     className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors mb-8"
                 >
                     Update Documents

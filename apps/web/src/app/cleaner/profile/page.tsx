@@ -20,7 +20,7 @@ export default async function CleanerProfilePage() {
     });
 
     if (!cleaner) {
-        redirect('/cleaner/onboarding');
+        redirect('/onboarding/cleaner');
     }
 
     return (

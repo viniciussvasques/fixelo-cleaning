@@ -90,7 +90,7 @@ function SignUpPageContent() {
 
             // Redirect based on role
             if (data.role === 'CLEANER') {
-                router.push('/cleaner/onboarding');
+                router.push('/onboarding/cleaner');
             } else {
                 // For customers, use the callbackUrl if provided
                 router.push(callbackUrl || '/dashboard');

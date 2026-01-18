@@ -21,7 +21,7 @@ export default function DocumentsStep() {
                 formData.append('insuranceDoc', insuranceDoc);
             }
 
-            const response = await fetch('/api/cleaner/onboarding/documents', {
+            const response = await fetch('/api/onboarding/cleaner/documents', {
                 method: 'POST',
                 body: formData,
             });
@@ -32,7 +32,7 @@ export default function DocumentsStep() {
             }
 
             toast.success('Documents saved!');
-            router.push('/cleaner/onboarding/social');
+            router.push('/onboarding/cleaner/social');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Something went wrong');
         } finally {
@@ -101,7 +101,7 @@ export default function DocumentsStep() {
                         type="button"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => router.push('/cleaner/onboarding/identity')}
+                        onClick={() => router.push('/onboarding/cleaner/identity')}
                     >
                         Back
                     </Button>

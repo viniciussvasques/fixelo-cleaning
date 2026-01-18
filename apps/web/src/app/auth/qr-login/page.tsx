@@ -81,7 +81,7 @@ function QRLoginContent() {
             // Redirect based on role
             setTimeout(() => {
                 if (data.role === 'CLEANER') {
-                    router.push('/cleaner/onboarding');
+                    router.push('/onboarding/cleaner');
                 } else if (data.role === 'ADMIN') {
                     router.push('/admin');
                 } else {

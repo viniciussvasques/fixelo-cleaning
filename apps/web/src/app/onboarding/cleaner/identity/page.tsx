@@ -98,7 +98,7 @@ export default function IdentityStep() {
             formData.append('idDocumentBack', idDocumentBack);
             formData.append('profilePhoto', profilePhoto);
 
-            const response = await fetch('/api/cleaner/onboarding/identity', {
+            const response = await fetch('/api/onboarding/cleaner/identity', {
                 method: 'POST',
                 body: formData,
             });
@@ -109,7 +109,7 @@ export default function IdentityStep() {
             }
 
             toast.success('Identity information saved!');
-            router.push('/cleaner/onboarding/documents');
+            router.push('/onboarding/cleaner/documents');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Something went wrong');
         } finally {
@@ -347,7 +347,7 @@ export default function IdentityStep() {
                         type="button"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => router.push('/cleaner/onboarding/account')}
+                        onClick={() => router.push('/onboarding/cleaner/account')}
                     >
                         Back
                     </Button>

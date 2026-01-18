@@ -48,7 +48,7 @@ export default async function CleanerDashboard() {
                     You need to complete onboarding to start accepting jobs and earning money.
                 </p>
                 <Link
-                    href="/cleaner/onboarding"
+                    href="/onboarding/cleaner"
                     className="bg-green-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors shadow-lg shadow-green-600/25"
                 >
                     Complete Onboarding
@@ -115,7 +115,7 @@ export default async function CleanerDashboard() {
                 bg: 'bg-orange-50', icon: AlertCircle, color: 'text-orange-600',
                 title: 'Documents Required',
                 desc: cleaner.documentRequestReason || 'Please upload required documents.',
-                action: { label: 'Upload Now', href: '/cleaner/onboarding/documents-needed' }
+                action: { label: 'Upload Now', href: '/onboarding/cleaner/documents-needed' }
             },
             BACKGROUND_CHECK: { bg: 'bg-purple-50', icon: FileText, color: 'text-purple-600', title: 'Background Check', desc: 'Verification in progress (2-3 days).' },
         };

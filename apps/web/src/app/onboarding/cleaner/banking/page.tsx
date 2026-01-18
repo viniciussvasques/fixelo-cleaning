@@ -51,7 +51,7 @@ export default function BankingStep() {
     const handleSubmitApplication = async () => {
         setIsLoading(true);
         try {
-            const response = await fetch('/api/cleaner/onboarding/submit', {
+            const response = await fetch('/api/onboarding/cleaner/submit', {
                 method: 'POST',
             });
 
@@ -61,7 +61,7 @@ export default function BankingStep() {
             }
 
             toast.success('Application submitted successfully!');
-            router.push('/cleaner/onboarding/pending');
+            router.push('/onboarding/cleaner/pending');
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Something went wrong');
         } finally {
@@ -131,7 +131,7 @@ export default function BankingStep() {
                         type="button"
                         variant="outline"
                         className="flex-1"
-                        onClick={() => router.push('/cleaner/onboarding/social')}
+                        onClick={() => router.push('/onboarding/cleaner/social')}
                     >
                         Back
                     </Button>

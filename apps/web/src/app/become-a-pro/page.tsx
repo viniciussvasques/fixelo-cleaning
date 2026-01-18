@@ -18,7 +18,7 @@ export default function BecomeAProPage() {
                             Sign In
                         </Link>
                         <Link
-                            href="/cleaner/onboarding"
+                            href="/onboarding/cleaner"
                             className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-semibold transition-colors"
                         >
                             Apply Now
@@ -45,7 +45,7 @@ export default function BecomeAProPage() {
                             </p>
                             <div className="flex flex-col sm:flex-row items-center gap-4 justify-center lg:justify-start">
                                 <Link
-                                    href="/cleaner/onboarding"
+                                    href="/onboarding/cleaner"
                                     className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-lg hover:shadow-xl transition-all hover:-translate-y-1"
                                 >
                                     Start Earning Today
@@ -166,7 +166,7 @@ export default function BecomeAProPage() {
                         Don't let empty schedule slots cost you money. Join Fixelo today.
                     </p>
                     <Link
-                        href="/cleaner/onboarding"
+                        href="/onboarding/cleaner"
                         className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-xl font-bold text-lg transition-all hover:scale-105"
                     >
                         Apply Now

@@ -26,7 +26,7 @@ export default async function DocumentsNeededPage() {
         } else if (cleaner.onboardingCompleted) {
             redirect('/cleaner/dashboard');
         } else {
-            redirect('/cleaner/onboarding');
+            redirect('/onboarding/cleaner');
         }
     }
 
@@ -85,7 +85,7 @@ export default async function DocumentsNeededPage() {
                                         </span>
                                     </div>
                                     <Button size="sm" asChild>
-                                        <a href={`/cleaner/onboarding/${doc === 'PHOTO_ID' ? 'identity' : 'documents'}`}>
+                                        <a href={`/onboarding/cleaner/${doc === 'PHOTO_ID' ? 'identity' : 'documents'}`}>
                                             Upload
                                         </a>
                                     </Button>
@@ -111,7 +111,7 @@ export default async function DocumentsNeededPage() {
                                     You'll receive an email and SMS notification once the review is complete.
                                 </p>
                                 <Button className="bg-blue-600 hover:bg-blue-700" asChild>
-                                    <a href="/cleaner/onboarding">
+                                    <a href="/onboarding/cleaner">
                                         Go to Onboarding
                                     </a>
                                 </Button>

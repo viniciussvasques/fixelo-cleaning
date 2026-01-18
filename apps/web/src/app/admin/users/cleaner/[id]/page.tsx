@@ -138,7 +138,7 @@ async function requestDocumentResubmission(id: string, reason: string, documents
                 ${documentsNeeded.map(doc => `<li>${doc.replace('_', ' ')}</li>`).join('')}
             </ul>
             <p>Please log in to your dashboard to upload the requested documents:</p>
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/cleaner/onboarding" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Upload Documents</a></p>
+            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/onboarding/cleaner" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Upload Documents</a></p>
             <p>Thank you for your cooperation.</p>
             <p>Best regards,<br/>The Fixelo Team</p>
         `,

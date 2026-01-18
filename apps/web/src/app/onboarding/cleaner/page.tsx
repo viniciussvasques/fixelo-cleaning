@@ -6,7 +6,7 @@ export default async function OnboardingPage() {
     const session = await auth();
 
     if (!session?.user?.id) {
-        redirect('/auth/signin?callbackUrl=/cleaner/onboarding');
+        redirect('/auth/signin?callbackUrl=/onboarding/cleaner');
     }
 
     // Check if user already has a cleaner profile
@@ -21,23 +21,23 @@ export default async function OnboardingPage() {
         }
         // If documents need resubmission
         if (existingProfile.verificationStatus === 'DOCUMENTS_NEEDED') {
-            redirect('/cleaner/onboarding/documents-needed');
+            redirect('/onboarding/cleaner/documents-needed');
         }
         // If pending/under review, go to pending page
         if (existingProfile.submittedAt) {
-            redirect('/cleaner/onboarding/pending');
+            redirect('/onboarding/cleaner/pending');
         }
         // Otherwise continue to current step
         const stepMap: Record<number, string> = {
-            1: '/cleaner/onboarding/account',
-            2: '/cleaner/onboarding/identity',
-            3: '/cleaner/onboarding/documents',
-            4: '/cleaner/onboarding/social',
-            5: '/cleaner/onboarding/banking',
+            1: '/onboarding/cleaner/account',
+            2: '/onboarding/cleaner/identity',
+            3: '/onboarding/cleaner/documents',
+            4: '/onboarding/cleaner/social',
+            5: '/onboarding/cleaner/banking',
         };
-        redirect(stepMap[existingProfile.onboardingStep] || '/cleaner/onboarding/account');
+        redirect(stepMap[existingProfile.onboardingStep] || '/onboarding/cleaner/account');
     }
 
     // New user - start at step 1
-    redirect('/cleaner/onboarding/account');
+    redirect('/onboarding/cleaner/account');
 }

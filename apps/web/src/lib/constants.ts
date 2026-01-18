@@ -62,7 +62,7 @@ export const ROUTES = {
     CLEANER_JOBS: '/cleaner/jobs',
     CLEANER_SCHEDULE: '/cleaner/schedule',
     CLEANER_PROFILE: '/cleaner/profile',
-    CLEANER_ONBOARDING: '/cleaner/onboarding',
+    CLEANER_ONBOARDING: '/onboarding/cleaner',
 
     // Admin
     ADMIN_DASHBOARD: '/admin',
