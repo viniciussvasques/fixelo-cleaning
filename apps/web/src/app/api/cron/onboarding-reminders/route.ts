@@ -13,6 +13,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@fixelo/database';
 import { sendEmailNotification } from '@/lib/email';
+import { auth } from '@/lib/auth';
+import { UserRole } from '@prisma/client';
 
 const CRON_SECRET = process.env.CRON_SECRET || 'fixelo-cron-secret';
 
@@ -47,14 +49,18 @@ const stepTemplates: Record<number, { subject: string; title: string; message: s
 
 export async function GET(request: NextRequest) {
     try {
-        // Verify authentication (cron secret or admin)
-        const authHeader = request.headers.get('authorization');
+        // Verify authentication (cron secret OR admin session)
         const cronSecret = request.headers.get('x-cron-secret');
-
-        // Allow if cron secret matches
         const isValidCron = cronSecret === CRON_SECRET;
 
-        if (!isValidCron && !authHeader) {
+        // Check for admin session if not cron
+        let isAdmin = false;
+        if (!isValidCron) {
+            const session = await auth();
+            isAdmin = session?.user?.role === UserRole.ADMIN;
+        }
+
+        if (!isValidCron && !isAdmin) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
