@@ -21,6 +21,8 @@ interface Props {
     params: { id: string };
 }
 
+import { sendEmailNotification } from '@/lib/email';
+
 async function updateUserAction(formData: FormData) {
     'use server';
 
@@ -42,6 +44,15 @@ async function updateUserAction(formData: FormData) {
         throw new Error("Cannot change your own admin role");
     }
 
+    // Get current user to check if role is changing
+    const currentUser = await prisma.user.findUnique({
+        where: { id },
+        include: { cleanerProfile: true }
+    });
+
+    const isChangingToCleaner = currentUser?.role !== UserRole.CLEANER && role === 'CLEANER';
+
+    // Update user
     await prisma.user.update({
         where: { id },
         data: {
@@ -54,9 +65,68 @@ async function updateUserAction(formData: FormData) {
         },
     });
 
+    // If changing to CLEANER, create CleanerProfile and send onboarding email
+    if (isChangingToCleaner && !currentUser?.cleanerProfile) {
+        // Create CleanerProfile
+        await prisma.cleanerProfile.create({
+            data: {
+                userId: id,
+                status: 'PENDING_APPROVAL',
+                onboardingStep: 1,
+                onboardingCompleted: false,
+            }
+        });
+
+        // Send onboarding email
+        await sendEmailNotification(id, {
+            to: email,
+            subject: '🎉 Welcome to Fixelo! Complete Your Pro Profile',
+            html: `
+                <h1>Welcome to the Fixelo Pro Team, ${firstName}!</h1>
+                <p>Your account has been upgraded to a <strong>Cleaner</strong> account.</p>
+                <p>To start receiving job offers, please complete your professional profile:</p>
+                <ul>
+                    <li>✅ Verify your identity</li>
+                    <li>✅ Upload required documents</li>
+                    <li>✅ Add your banking information</li>
+                </ul>
+                <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/onboarding/cleaner" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Your Profile</a></p>
+                <p>If you have any questions, contact us at support@fixelo.app.</p>
+                <p>Best regards,<br/>The Fixelo Team</p>
+            `,
+        });
+    }
+
     revalidatePath("/admin/users");
     revalidatePath(`/admin/users/${id}`);
     redirect('/admin/users');
+}
+
+async function sendOnboardingEmailAction(formData: FormData) {
+    'use server';
+
+    const session = await auth();
+    if (session?.user?.role !== UserRole.ADMIN) {
+        throw new Error("Unauthorized");
+    }
+
+    const userId = formData.get('userId') as string;
+    const userEmail = formData.get('userEmail') as string;
+    const userName = formData.get('userName') as string;
+
+    await sendEmailNotification(userId, {
+        to: userEmail,
+        subject: '📋 Complete Your Fixelo Pro Profile',
+        html: `
+            <h1>Hello ${userName}!</h1>
+            <p>Please complete your professional profile to start receiving job offers on Fixelo.</p>
+            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/onboarding/cleaner" style="background-color: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Complete Your Profile</a></p>
+            <p>If you have any questions, contact us at support@fixelo.app.</p>
+            <p>Best regards,<br/>The Fixelo Team</p>
+        `,
+    });
+
+    revalidatePath(`/admin/users/${userId}`);
 }
 
 async function deleteUserAction(formData: FormData) {
@@ -202,6 +272,38 @@ export default async function UserEditPage({ params }: Props) {
                     </CardContent>
                 </Card>
             </form>
+
+            {/* Cleaner Actions - Show for CLEANERs who haven't completed onboarding */}
+            {user.role === UserRole.CLEANER && user.cleanerProfile && !user.cleanerProfile.onboardingCompleted && (
+                <Card className="border-blue-200 bg-blue-50">
+                    <CardHeader>
+                        <CardTitle className="text-blue-800 flex items-center gap-2">
+                            📋 Cleaner Actions
+                        </CardTitle>
+                        <CardDescription className="text-blue-700">
+                            Onboarding Status: Step {user.cleanerProfile.onboardingStep} / 5
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form action={sendOnboardingEmailAction}>
+                            <input type="hidden" name="userId" value={user.id} />
+                            <input type="hidden" name="userEmail" value={user.email} />
+                            <input type="hidden" name="userName" value={user.firstName} />
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-medium">Send Onboarding Email</p>
+                                    <p className="text-sm text-muted-foreground">
+                                        Remind this cleaner to complete their profile setup.
+                                    </p>
+                                </div>
+                                <Button type="submit" variant="secondary" size="sm">
+                                    📧 Send Email
+                                </Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Danger Zone */}
             {!isSelf && (
