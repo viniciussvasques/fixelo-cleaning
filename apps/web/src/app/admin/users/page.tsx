@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CleanerStatus, UserRole, Prisma } from "@prisma/client";
 import { SendRemindersButton } from "@/components/admin/send-reminders-button";
 import { UsersFilters } from "@/components/admin/users-filters";
+import { Pagination } from "@/components/admin/pagination";
 import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
@@ -15,11 +16,17 @@ interface UsersPageProps {
         search?: string;
         role?: string;
         status?: string;
+        page?: string;
     };
 }
 
 export default async function UsersPage({ searchParams }: UsersPageProps) {
-    const { search, role, status } = searchParams;
+    const { search, role, status, page } = searchParams;
+
+    // Pagination constants
+    const PAGE_SIZE = 25;
+    const currentPage = Math.max(1, parseInt(page || '1', 10));
+    const skip = (currentPage - 1) * PAGE_SIZE;
 
     // Build filter conditions
     const where: Prisma.UserWhereInput = {};
@@ -58,9 +65,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
         take: 20,
     });
 
+    // Get total count for pagination
+    const totalUsers = await prisma.user.count({ where });
+    const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
+
     const users = await prisma.user.findMany({
         where,
-        take: 100,
+        skip,
+        take: PAGE_SIZE,
         orderBy: { createdAt: 'desc' },
         include: { cleanerProfile: true }
     });
@@ -72,7 +84,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
 
             {/* Filters */}
             <Suspense fallback={<div className="h-32 bg-slate-100 animate-pulse rounded-lg" />}>
-                <UsersFilters totalUsers={users.length} />
+                <UsersFilters totalUsers={totalUsers} />
             </Suspense>
 
             {/* Pending Approvals */}
@@ -211,6 +223,14 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                         </table>
                     </div>
                 </CardContent>
+                <Suspense fallback={<div className="h-12 animate-pulse" />}>
+                    <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalItems={totalUsers}
+                        pageSize={PAGE_SIZE}
+                    />
+                </Suspense>
             </Card>
         </div>
     );
