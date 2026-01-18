@@ -48,8 +48,18 @@ export async function POST(request: NextRequest) {
             description: 'Please upload this document to continue with your verification.',
         };
 
+        // Get the cleaner profile to retrieve actual userId
+        const cleaner = await prisma.cleanerProfile.findUnique({
+            where: { id: cleanerId },
+            select: { userId: true }
+        });
+
+        if (!cleaner) {
+            return NextResponse.json({ error: 'Cleaner not found' }, { status: 404 });
+        }
+
         // Send specific document request email
-        await sendEmailNotification(cleanerId, {
+        await sendEmailNotification(cleaner.userId, {
             to: cleanerEmail,
             subject: `📋 Action Required: Please Resubmit Your ${docInfo.title}`,
             html: `
@@ -80,7 +90,7 @@ export async function POST(request: NextRequest) {
                 
                 <p>Best regards,<br/>The Fixelo Team</p>
             `,
-        });
+        }, { type: 'DOCUMENT_REQUEST', documentType });
 
         // Update cleaner profile to track document request
         await prisma.cleanerProfile.update({
