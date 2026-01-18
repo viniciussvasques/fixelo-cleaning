@@ -17,15 +17,16 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { email } = body;
+        const { to, email } = body;
+        const recipientEmail = to || email;
 
-        if (!email) {
+        if (!recipientEmail) {
             return NextResponse.json({ error: 'Email address is required' }, { status: 400 });
         }
 
         // Send test email
         await sendEmail({
-            to: email,
+            to: recipientEmail,
             subject: '✅ Fixelo Email Test - Configuration Working!',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
                     <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
                         <p style="margin: 0;"><strong>Test Details:</strong></p>
                         <p style="margin: 5px 0;">• Sent at: ${new Date().toLocaleString()}</p>
-                        <p style="margin: 5px 0;">• Recipient: ${email}</p>
+                        <p style="margin: 5px 0;">• Recipient: ${recipientEmail}</p>
                     </div>
                     
                     <p>Your SMTP settings are configured properly and emails can be sent from your Fixelo platform.</p>
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            message: `Test email sent successfully to ${email}`
+            message: `Test email sent successfully to ${recipientEmail}`
         });
     } catch (error) {
         console.error('[Test Email] Error:', error);
