@@ -3,12 +3,45 @@ import { prisma } from "@fixelo/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CleanerStatus, UserRole } from "@prisma/client";
+import { CleanerStatus, UserRole, Prisma } from "@prisma/client";
 import { SendRemindersButton } from "@/components/admin/send-reminders-button";
+import { UsersFilters } from "@/components/admin/users-filters";
+import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
 
-export default async function UsersPage() {
+interface UsersPageProps {
+    searchParams: {
+        search?: string;
+        role?: string;
+        status?: string;
+    };
+}
+
+export default async function UsersPage({ searchParams }: UsersPageProps) {
+    const { search, role, status } = searchParams;
+
+    // Build filter conditions
+    const where: Prisma.UserWhereInput = {};
+
+    if (search) {
+        where.OR = [
+            { firstName: { contains: search, mode: 'insensitive' } },
+            { lastName: { contains: search, mode: 'insensitive' } },
+            { email: { contains: search, mode: 'insensitive' } },
+        ];
+    }
+
+    if (role && role !== '') {
+        where.role = role as UserRole;
+    }
+
+    if (status === 'active') {
+        where.isActive = true;
+    } else if (status === 'inactive') {
+        where.isActive = false;
+    }
+
     // Cleaners pending approval (completed onboarding, waiting for admin review)
     const pendingCleaners = await prisma.cleanerProfile.findMany({
         where: { status: CleanerStatus.PENDING_APPROVAL },
@@ -26,7 +59,8 @@ export default async function UsersPage() {
     });
 
     const users = await prisma.user.findMany({
-        take: 50,
+        where,
+        take: 100,
         orderBy: { createdAt: 'desc' },
         include: { cleanerProfile: true }
     });
@@ -35,6 +69,11 @@ export default async function UsersPage() {
     return (
         <div className="space-y-6">
             <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
+
+            {/* Filters */}
+            <Suspense fallback={<div className="h-32 bg-slate-100 animate-pulse rounded-lg" />}>
+                <UsersFilters totalUsers={users.length} />
+            </Suspense>
 
             {/* Pending Approvals */}
             {pendingCleaners.length > 0 && (
