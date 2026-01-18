@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CleanerStatus, UserRole } from "@prisma/client";
+import { SendRemindersButton } from "@/components/admin/send-reminders-button";
 
 export const dynamic = 'force-dynamic';
 
@@ -84,6 +85,9 @@ export default async function UsersPage() {
                         <CardDescription className="text-orange-700 dark:text-orange-300">
                             These cleaners started registration but haven&apos;t completed all steps
                         </CardDescription>
+                        <div className="mt-3">
+                            <SendRemindersButton count={incompleteOnboarding.length} />
+                        </div>
                     </CardHeader>
                     <CardContent>
                         <div className="relative w-full overflow-auto">

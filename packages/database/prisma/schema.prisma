@@ -208,6 +208,7 @@ model CleanerProfile {
   verificationStatus    String         @default("PENDING") // PENDING, DOCUMENTS_NEEDED, UNDER_REVIEW, BACKGROUND_CHECK, APPROVED, REJECTED
   onboardingCompleted   Boolean        @default(false)
   onboardingStep        Int            @default(1)         // Track current step (1-5)
+  lastReminderSentAt    DateTime?      // Last time onboarding reminder was sent
   
   // Document Resubmission Request
   documentRequestReason String?        // Reason why documents need to be resubmitted
