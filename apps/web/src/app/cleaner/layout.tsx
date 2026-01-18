@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@fixelo/database";
 import { UserRole } from "@prisma/client";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { SessionProvider } from "next-auth/react";
 import { CleanerLayoutWrapper } from "@/components/dashboard/cleaner-layout-wrapper";
 
@@ -20,8 +21,13 @@ export default async function CleanerLayout({
         redirect("/");
     }
 
-    // Check if cleaner has completed onboarding (skip for admins)
-    if (session.user.role === UserRole.CLEANER) {
+    // Get current path to skip onboarding gate for onboarding pages
+    const headersList = await headers();
+    const pathname = headersList.get('x-pathname') || headersList.get('x-invoke-path') || '';
+    const isOnboardingPage = pathname.includes('/cleaner/onboarding');
+
+    // Check if cleaner has completed onboarding (skip for admins and onboarding pages)
+    if (session.user.role === UserRole.CLEANER && !isOnboardingPage) {
         const cleanerProfile = await prisma.cleanerProfile.findUnique({
             where: { userId: session.user.id },
             select: { onboardingCompleted: true, onboardingStep: true }
