@@ -138,10 +138,36 @@ model User {
   clientRatings      ClientRating[]    @relation("ClientRatings")
   blacklistedBy      CleanerBlacklist[] @relation("BlacklistedClient")
   cleanerNotes       CleanerNote[]     @relation("ClientNotes")
+  emailLogs          EmailLog[]
 
   @@index([email])
   @@index([phone])
   @@index([role])
+}
+
+// ============================================
+// EMAIL LOG - Track all emails sent
+// ============================================
+
+model EmailLog {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        String   // ONBOARDING_REMINDER, DOCUMENT_REQUEST, APPROVAL, REJECTION, ROLE_CHANGE
+  subject     String
+  recipient   String   // Email address
+  
+  status      String   @default("SENT") // SENT, FAILED, DELIVERED, OPENED
+  sentAt      DateTime @default(now())
+  
+  metadata    Json?    // Additional context (step number, document type, etc.)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([sentAt])
 }
 
 // ============================================

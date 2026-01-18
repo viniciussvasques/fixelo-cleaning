@@ -155,22 +155,24 @@ export async function sendEmail(options: EmailOptions): Promise<boolean> {
 }
 
 /**
- * Sends email and saves notification to database
+ * Sends email and saves log to database
  */
 export async function sendEmailNotification(
   userId: string,
   options: EmailOptions,
   metadata?: Record<string, unknown>
 ): Promise<void> {
+  const emailType = (metadata?.type as string) || 'GENERAL';
+
   try {
     await sendEmail(options);
 
-    await prisma.notification.create({
+    await prisma.emailLog.create({
       data: {
         userId,
-        type: 'EMAIL',
+        type: emailType,
         subject: options.subject,
-        body: options.notificationText || options.text || (options.html ? stripHtml(options.html) : ''),
+        recipient: options.to,
         status: 'SENT',
         sentAt: new Date(),
         metadata: (metadata || {}) as Prisma.InputJsonValue,
@@ -180,66 +182,21 @@ export async function sendEmailNotification(
     console.error('❌ Error sending email notification:', error);
 
     try {
-      await prisma.notification.create({
+      await prisma.emailLog.create({
         data: {
           userId,
-          type: 'EMAIL',
+          type: emailType,
           subject: options.subject,
-          body: options.notificationText || options.text || (options.html ? stripHtml(options.html) : ''),
+          recipient: options.to,
           status: 'FAILED',
-          failedAt: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-          metadata: (metadata || {}) as Prisma.InputJsonValue,
+          metadata: {
+            ...(metadata || {}),
+            error: error instanceof Error ? error.message : 'Unknown error'
+          } as Prisma.InputJsonValue,
         },
       });
     } catch (dbError) {
-      console.error('❌ Error saving failed notification:', dbError);
-    }
-  }
-}
-
-/**
- * Processes pending email notifications from database
- */
-export async function processPendingEmailNotifications(): Promise<void> {
-  const pendingNotifications = await prisma.notification.findMany({
-    where: {
-      type: 'EMAIL',
-      status: 'PENDING',
-    },
-    include: {
-      user: true,
-    },
-    take: 50,
-  });
-
-  for (const notification of pendingNotifications) {
-    try {
-      await sendEmail({
-        to: notification.user.email,
-        subject: notification.subject || 'Fixelo Notification',
-        html: notification.body,
-        text: notification.body,
-      });
-
-      await prisma.notification.update({
-        where: { id: notification.id },
-        data: {
-          status: 'SENT',
-          sentAt: new Date(),
-        },
-      });
-    } catch (error) {
-      console.error(`❌ Error processing notification ${notification.id}:`, error);
-
-      await prisma.notification.update({
-        where: { id: notification.id },
-        data: {
-          status: 'FAILED',
-          failedAt: new Date(),
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        },
-      });
+      console.error('❌ Error saving failed email log:', dbError);
     }
   }
 }

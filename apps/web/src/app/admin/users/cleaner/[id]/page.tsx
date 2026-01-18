@@ -14,6 +14,7 @@ import { revalidatePath } from "next/cache";
 import { sendEmailNotification } from "@/lib/email";
 import { sendSMSNotification } from "@/lib/sms";
 import { CleanerDocumentsViewerEnhanced } from "@/components/admin/cleaner-documents-viewer";
+import { EmailHistory } from "@/components/admin/email-history";
 
 
 async function approveCleaner(id: string) {
@@ -429,6 +430,20 @@ export default async function CleanerReviewPage({ params }: { params: { id: stri
                             </p>
                         </div>
                     </div>
+                </CardContent>
+            </Card>
+
+            {/* Email History */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Mail className="w-5 h-5" />
+                        Email History
+                    </CardTitle>
+                    <CardDescription>All emails sent to this cleaner</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <EmailHistory cleanerId={cleaner.id} />
                 </CardContent>
             </Card>
         </div>
