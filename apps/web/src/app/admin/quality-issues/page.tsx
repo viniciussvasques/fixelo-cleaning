@@ -303,7 +303,7 @@ export default function QualityIssuesPage() {
                                             <Badge variant="outline">{issue.issueType.replace(/_/g, ' ')}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {issue.booking.assignments[0] ? (
+                                            {issue.booking.assignments[0]?.cleaner?.user ? (
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm">
                                                         {issue.booking.assignments[0].cleaner.user.firstName}
@@ -324,8 +324,8 @@ export default function QualityIssuesPage() {
                                             <span className="text-sm">{formatDistanceToNow(new Date(issue.createdAt), { addSuffix: true })}</span>
                                         </TableCell>
                                         <TableCell>
-                                            <Button 
-                                                size="sm" 
+                                            <Button
+                                                size="sm"
                                                 variant={issue.status === 'REPORTED' ? 'default' : 'outline'}
                                                 onClick={() => setSelectedIssue(issue)}
                                             >
@@ -373,7 +373,7 @@ export default function QualityIssuesPage() {
                                 </div>
 
                                 {/* Cleaner Info */}
-                                {selectedIssue.booking.assignments[0] && (
+                                {selectedIssue.booking.assignments[0]?.cleaner?.user && (
                                     <div className="p-3 border rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div>
