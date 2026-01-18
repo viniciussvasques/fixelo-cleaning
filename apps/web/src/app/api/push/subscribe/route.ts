@@ -12,9 +12,9 @@ import { savePushSubscription, removePushSubscription, getVapidPublicKey } from 
  * GET - Get VAPID public key
  */
 export async function GET() {
-    const publicKey = getVapidPublicKey();
+    const publicKey = await getVapidPublicKey();
 
-    if (!publicKey) {
+    if (!publicKey || publicKey.length < 20) {
         return NextResponse.json(
             { error: 'Push notifications not configured' },
             { status: 503 }
