@@ -135,7 +135,12 @@ export interface EmailOptions {
 export async function sendEmail(options: EmailOptions): Promise<boolean> {
   const transporter = await createTransporter();
   const config = await getEmailConfig();
-  const fromEmail = options.from || config.from;
+
+  // Ensure from always has "Fixelo" name prefix
+  let fromEmail = options.from || config.from;
+  if (!fromEmail.includes('<')) {
+    fromEmail = `Fixelo <${fromEmail}>`;
+  }
 
   try {
     const info = await transporter.sendMail({
