@@ -97,11 +97,41 @@ export async function POST(req: Request) {
             );
         }
 
-        // TODO: In production, upload documents to S3/Cloudinary and store URLs
-        // For MVP, we store placeholder URLs
-        const idDocumentFrontUrl = `/uploads/id-front-${profile.id}.${idDocumentFront.name.split('.').pop()}`;
-        const idDocumentBackUrl = `/uploads/id-back-${profile.id}.${idDocumentBack.name.split('.').pop()}`;
-        const profilePhotoUrl = `/uploads/profile-${profile.id}.${profilePhoto.name.split('.').pop()}`;
+        // Upload documents to S3
+        const { uploadFileToS3, UPLOAD_FOLDERS } = await import('@/lib/s3');
+
+        let idDocumentFrontUrl = '';
+        let idDocumentBackUrl = '';
+        let profilePhotoUrl = '';
+
+        try {
+            const frontResult = await uploadFileToS3(
+                idDocumentFront,
+                UPLOAD_FOLDERS.CLEANER_DOCUMENTS,
+                session.user.id
+            );
+            idDocumentFrontUrl = frontResult.url;
+
+            const backResult = await uploadFileToS3(
+                idDocumentBack,
+                UPLOAD_FOLDERS.CLEANER_DOCUMENTS,
+                session.user.id
+            );
+            idDocumentBackUrl = backResult.url;
+
+            const photoResult = await uploadFileToS3(
+                profilePhoto,
+                UPLOAD_FOLDERS.PROFILE_PHOTOS,
+                session.user.id
+            );
+            profilePhotoUrl = photoResult.url;
+        } catch (uploadError) {
+            console.error('[Identity] S3 upload error:', uploadError);
+            return NextResponse.json(
+                { error: { code: 'UPLOAD_FAILED', message: 'Failed to upload documents. Please try again.' } },
+                { status: 500 }
+            );
+        }
 
         // Prepare data based on tax ID type
         const updateData: Record<string, unknown> = {
