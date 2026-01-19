@@ -130,11 +130,8 @@ export default function RootLayout({
               t.src=v;s=b.getElementsByTagName(e)[0];
               s.parentNode.insertBefore(t,s)}(window, document,'script',
               'https://connect.facebook.net/en_US/fbevents.js');
-              if(!window._fbPixelInitialized){
-                window._fbPixelInitialized=true;
-                fbq('init', '1242796121071698');
-                fbq('track', 'PageView');
-              }
+              fbq('init', '1242796121071698');
+              fbq('track', 'PageView');
             `,
           }}
         />

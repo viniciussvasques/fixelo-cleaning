@@ -73,14 +73,10 @@ export function GoogleTagManagerNoScript() {
     );
 }
 
-// Facebook Pixel (optional for ads)
-const FB_PIXEL_ID = process.env.NEXT_PUBLIC_FB_PIXEL_ID;
+// Facebook Pixel
+const FB_PIXEL_ID = '1242796121071698';
 
 export function FacebookPixel() {
-    if (!FB_PIXEL_ID) {
-        return null;
-    }
-
     return (
         <Script id="facebook-pixel" strategy="afterInteractive">
             {`
@@ -92,8 +88,11 @@ export function FacebookPixel() {
         t.src=v;s=b.getElementsByTagName(e)[0];
         s.parentNode.insertBefore(t,s)}(window, document,'script',
         'https://connect.facebook.net/en_US/fbevents.js');
-        fbq('init', '${FB_PIXEL_ID}');
-        fbq('track', 'PageView');
+        if(!window._fbPixelInitialized){
+          window._fbPixelInitialized=true;
+          fbq('init', '${FB_PIXEL_ID}');
+          fbq('track', 'PageView');
+        }
       `}
         </Script>
     );
