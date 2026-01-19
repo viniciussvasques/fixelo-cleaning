@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1080, height=1920">
+    <title>Fixelo Promo Reel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            width: 1080px;
+            height: 1920px;
+            overflow: hidden;
+            background: #0a0a0a;
+        }
+
+        .slide {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Slide 1 - Intro Logo */
+        .slide-1 {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 50%, #0ea5e9 100%);
+            animation: slideIn 0.8s ease-out 0.3s forwards, slideOut 0.5s ease-in 3s forwards;
+        }
+
+        .slide-1 .logo {
+            font-size: 140px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: bounceIn 1s ease-out 0.5s both;
+        }
+
+        .slide-1 .sparkles {
+            position: absolute;
+            font-size: 80px;
+            animation: sparkleRotate 2s linear infinite;
+        }
+
+        .slide-1 .sparkles.s1 {
+            top: 200px;
+            left: 150px;
+            animation-delay: 0s;
+        }
+
+        .slide-1 .sparkles.s2 {
+            top: 400px;
+            right: 120px;
+            animation-delay: 0.3s;
+        }
+
+        .slide-1 .sparkles.s3 {
+            bottom: 300px;
+            left: 200px;
+            animation-delay: 0.6s;
+        }
+
+        .slide-1 .sparkles.s4 {
+            bottom: 500px;
+            right: 180px;
+            animation-delay: 0.9s;
+        }
+
+        .slide-1 .tagline {
+            font-size: 48px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 30px;
+            animation: fadeInUp 0.8s ease-out 1.2s both;
+        }
+
+        /* Slide 2 - Problem */
+        .slide-2 {
+            background: linear-gradient(180deg, #1f1f1f 0%, #2d2d2d 100%);
+            animation: slideIn 0.8s ease-out 3.5s forwards, slideOut 0.5s ease-in 6.5s forwards;
+        }
+
+        .slide-2 .emoji {
+            font-size: 200px;
+            animation: shake 0.5s ease-in-out 4s both;
+        }
+
+        .slide-2 .text {
+            font-size: 64px;
+            font-weight: 800;
+            color: white;
+            text-align: center;
+            margin-top: 40px;
+            animation: fadeInUp 0.6s ease-out 4.2s both;
+        }
+
+        .slide-2 .subtext {
+            font-size: 36px;
+            color: #888;
+            margin-top: 20px;
+            animation: fadeInUp 0.6s ease-out 4.5s both;
+        }
+
+        /* Slide 3 - Solution Intro */
+        .slide-3 {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+            animation: slideIn 0.8s ease-out 7s forwards, slideOut 0.5s ease-in 10s forwards;
+        }
+
+        .slide-3 .big-text {
+            font-size: 80px;
+            font-weight: 900;
+            color: white;
+            text-align: center;
+            line-height: 1.2;
+            animation: scaleIn 0.6s ease-out 7.3s both;
+        }
+
+        .slide-3 .arrow {
+            font-size: 120px;
+            margin-top: 40px;
+            animation: bounce 1s ease-in-out 8s infinite;
+        }
+
+        /* Slide 4 - Standard Price */
+        .slide-4 {
+            background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
+            animation: slideIn 0.8s ease-out 10.5s forwards, slideOut 0.5s ease-in 13.5s forwards;
+        }
+
+        .slide-4 .service-badge {
+            background: #3b82f6;
+            color: white;
+            padding: 20px 60px;
+            border-radius: 50px;
+            font-size: 32px;
+            font-weight: 700;
+            animation: fadeInDown 0.5s ease-out 10.8s both;
+        }
+
+        .slide-4 .price-big {
+            font-size: 200px;
+            font-weight: 900;
+            color: #1e40af;
+            margin: 40px 0;
+            animation: countUp 1s ease-out 11s both;
+        }
+
+        .slide-4 .price-note {
+            font-size: 36px;
+            color: #64748b;
+            animation: fadeIn 0.5s ease-out 11.5s both;
+        }
+
+        .slide-4 .features-list {
+            margin-top: 60px;
+            animation: fadeInUp 0.5s ease-out 11.8s both;
+        }
+
+        .slide-4 .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            font-size: 36px;
+            color: #334155;
+            margin: 20px 0;
+        }
+
+        .slide-4 .check {
+            width: 50px;
+            height: 50px;
+            background: #22c55e;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+        }
+
+        /* Slide 5 - Deep Clean Price */
+        .slide-5 {
+            background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+            animation: slideIn 0.8s ease-out 14s forwards, slideOut 0.5s ease-in 17s forwards;
+        }
+
+        .slide-5 .popular-badge {
+            background: #fbbf24;
+            color: #1e1e1e;
+            padding: 15px 50px;
+            border-radius: 50px;
+            font-size: 28px;
+            font-weight: 800;
+            animation: pulse 1s ease-in-out 14.3s both;
+        }
+
+        .slide-5 .service-name {
+            font-size: 60px;
+            font-weight: 800;
+            color: white;
+            margin-top: 40px;
+            animation: fadeIn 0.5s ease-out 14.5s both;
+        }
+
+        .slide-5 .price-big {
+            font-size: 200px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: bounceIn 0.8s ease-out 14.8s both;
+        }
+
+        .slide-5 .includes {
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 40px;
+            text-align: center;
+            animation: fadeIn 0.5s ease-out 15.3s both;
+        }
+
+        /* Slide 6 - Move In/Out */
+        .slide-6 {
+            background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
+            animation: slideIn 0.8s ease-out 17.5s forwards, slideOut 0.5s ease-in 20.5s forwards;
+        }
+
+        .slide-6 .emoji-row {
+            font-size: 100px;
+            animation: fadeIn 0.5s ease-out 17.8s both;
+        }
+
+        .slide-6 .service-name {
+            font-size: 56px;
+            font-weight: 800;
+            color: #065f46;
+            margin-top: 30px;
+            animation: fadeInUp 0.5s ease-out 18s both;
+        }
+
+        .slide-6 .price-big {
+            font-size: 180px;
+            font-weight: 900;
+            color: #047857;
+            animation: scaleIn 0.6s ease-out 18.3s both;
+        }
+
+        .slide-6 .deposit-text {
+            background: #047857;
+            color: white;
+            padding: 20px 50px;
+            border-radius: 20px;
+            font-size: 36px;
+            font-weight: 700;
+            margin-top: 40px;
+            animation: shake 0.5s ease-in-out 18.8s both;
+        }
+
+        /* Slide 7 - CTA */
+        .slide-7 {
+            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 50%, #1e3a8a 100%);
+            animation: slideIn 0.8s ease-out 21s forwards;
+        }
+
+        .slide-7 .cta-text {
+            font-size: 72px;
+            font-weight: 900;
+            color: white;
+            text-align: center;
+            line-height: 1.3;
+            animation: fadeInUp 0.6s ease-out 21.3s both;
+        }
+
+        .slide-7 .cta-button {
+            background: white;
+            color: #1e40af;
+            padding: 40px 100px;
+            border-radius: 100px;
+            font-size: 48px;
+            font-weight: 800;
+            margin-top: 60px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: bounceIn 0.8s ease-out 21.8s both;
+        }
+
+        .slide-7 .website {
+            font-size: 64px;
+            font-weight: 800;
+            color: white;
+            margin-top: 60px;
+            animation: pulse 1.5s ease-in-out 22.5s infinite;
+        }
+
+        .slide-7 .arrow-up {
+            font-size: 80px;
+            margin-top: 20px;
+            animation: bounce 0.8s ease-in-out 23s infinite;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(-100%);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounceIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.3);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            70% {
+                transform: scale(0.9);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            25% {
+                transform: translateX(-20px) rotate(-5deg);
+            }
+
+            75% {
+                transform: translateX(20px) rotate(5deg);
+            }
+        }
+
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-30px);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        @keyframes sparkleRotate {
+            0% {
+                opacity: 0.3;
+                transform: rotate(0deg) scale(0.8);
+            }
+
+            50% {
+                opacity: 1;
+                transform: rotate(180deg) scale(1.2);
+            }
+
+            100% {
+                opacity: 0.3;
+                transform: rotate(360deg) scale(0.8);
+            }
+        }
+
+        @keyframes countUp {
+            from {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Slide 1: Logo Intro -->
+    <div class="slide slide-1">
+        <span class="sparkles s1">✨</span>
+        <span class="sparkles s2">✨</span>
+        <span class="sparkles s3">✨</span>
+        <span class="sparkles s4">✨</span>
+        <div class="logo">Fixelo</div>
+        <div class="tagline">Professional Home Cleaning</div>
+    </div>
+
+    <!-- Slide 2: Problem -->
+    <div class="slide slide-2">
+        <div class="emoji">😫</div>
+        <div class="text">Tired of cleaning?</div>
+        <div class="subtext">We get it. Life is busy.</div>
+    </div>
+
+    <!-- Slide 3: Solution Intro -->
+    <div class="slide slide-3">
+        <div class="big-text">Let the<br />Pros<br />Handle It</div>
+        <div class="arrow">👇</div>
+    </div>
+
+    <!-- Slide 4: Standard Cleaning -->
+    <div class="slide slide-4">
+        <div class="service-badge">STANDARD CLEANING</div>
+        <div class="price-big">$109</div>
+        <div class="price-note">Starting price</div>
+        <div class="features-list">
+            <div class="feature-item"><span class="check">✓</span> All rooms cleaned</div>
+            <div class="feature-item"><span class="check">✓</span> Bathrooms sanitized</div>
+            <div class="feature-item"><span class="check">✓</span> Kitchen sparkling</div>
+        </div>
+    </div>
+
+    <!-- Slide 5: Deep Clean -->
+    <div class="slide slide-5">
+        <div class="popular-badge">⭐ MOST POPULAR</div>
+        <div class="service-name">DEEP CLEANING</div>
+        <div class="price-big">$169</div>
+        <div class="includes">Inside appliances • Baseboards<br />Cabinets • Detailed scrub</div>
+    </div>
+
+    <!-- Slide 6: Move In/Out -->
+    <div class="slide slide-6">
+        <div class="emoji-row">🏠 📦 🚚</div>
+        <div class="service-name">MOVE IN/OUT</div>
+        <div class="price-big">$129</div>
+        <div class="deposit-text">💰 Get Your Deposit Back!</div>
+    </div>
+
+    <!-- Slide 7: CTA -->
+    <div class="slide slide-7">
+        <div class="cta-text">Book Your<br />Clean Today!</div>
+        <div class="cta-button">Book Now</div>
+        <div class="website">fixelo.app</div>
+        <div class="arrow-up">👆</div>
+    </div>
+</body>
+
+</html>

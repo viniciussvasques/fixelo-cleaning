@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { metaViewContent } from '@/lib/meta-pixel';
 
 interface ServiceType {
     id: string;
@@ -30,6 +31,12 @@ function BookPageContent() {
             const response = await fetch('/api/service-types');
             const data = await response.json();
             setServices(data.serviceTypes || []);
+
+            // Track Meta Pixel ViewContent
+            metaViewContent({
+                contentType: 'service_list',
+                contentName: 'Cleaning Services',
+            });
         } catch (error) {
             console.error('Error fetching services:', error);
         } finally {

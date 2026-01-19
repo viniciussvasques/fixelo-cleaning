@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { CheckCircle, XCircle, CalendarClock } from 'lucide-react';
 import { RecurringSetup } from '@/components/bookings/recurring-setup';
 import { trackPurchase } from '@/lib/analytics';
+import { metaPurchase } from '@/lib/meta-pixel';
 
 function SuccessPageContent() {
     const searchParams = useSearchParams();
@@ -71,6 +72,14 @@ function SuccessPageContent() {
                     bedrooms: data.booking.bedrooms || 2,
                     bathrooms: data.booking.bathrooms || 1,
                     paymentMethod: 'card',
+                });
+
+                // Track Meta Pixel Purchase conversion
+                metaPurchase({
+                    contentType: 'cleaning_service',
+                    contentName: data.booking.serviceType?.name || 'Cleaning Service',
+                    contentIds: [data.booking.serviceType?.slug || 'cleaning'],
+                    value: data.booking.totalPrice || 0,
                 });
 
                 // Don't reset immediately - we need the data for recurring setup

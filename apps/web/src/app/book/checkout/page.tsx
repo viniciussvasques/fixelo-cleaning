@@ -10,6 +10,7 @@ import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { StripeProvider } from '@/components/providers/StripeProvider';
 import { Loader2 } from 'lucide-react';
 import { trackBeginCheckout } from '@/lib/analytics';
+import { metaInitiateCheckout } from '@/lib/meta-pixel';
 
 function CheckoutForm({ amount }: { amount: number }) {
     const stripe = useStripe();
@@ -195,6 +196,15 @@ export default function CheckoutPage() {
                 bedrooms: homeDetails?.bedrooms || 1,
                 bathrooms: homeDetails?.bathrooms || 1,
                 addons: addOns,
+            });
+
+            // Track Meta Pixel InitiateCheckout
+            metaInitiateCheckout({
+                contentType: 'cleaning_service',
+                contentName: foundService?.name || 'Cleaning Service',
+                contentIds: [foundService?.slug || 'cleaning'],
+                value: totalPrice,
+                numItems: 1,
             });
 
             setIsLoading(false);
