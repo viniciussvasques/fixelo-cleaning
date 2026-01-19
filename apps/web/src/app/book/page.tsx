@@ -61,10 +61,37 @@ function BookPageContent() {
 
     return (
         <div className="min-h-screen bg-gray-50">
+            {/* Trust Banner */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white py-2.5 px-4">
+                <div className="container mx-auto flex items-center justify-center gap-6 text-sm font-medium flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" /></svg>
+                        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" /></svg>
+                        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" /></svg>
+                        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" /></svg>
+                        <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20"><path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" /></svg>
+                        <span className="ml-1">5-Star Rated</span>
+                    </div>
+                    <span className="hidden sm:inline text-blue-200">|</span>
+                    <div className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                        <span>100% Satisfaction Guaranteed</span>
+                    </div>
+                    <span className="hidden sm:inline text-blue-200">|</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="font-bold">From $109</span>
+                    </div>
+                </div>
+            </div>
+
             {/* Main Content */}
             <div className="py-12">
                 <div className="container mx-auto px-4">
                     <div className="max-w-5xl mx-auto text-center mb-10">
+                        <div className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 border border-green-100">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                            Trusted by Orlando Homeowners
+                        </div>
                         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
                             Choose Your Clean
                         </h1>
