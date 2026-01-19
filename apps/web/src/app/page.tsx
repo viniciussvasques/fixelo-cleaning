@@ -376,11 +376,24 @@ export default function HomePage() {
               <ul className="space-y-2 text-sm text-slate-400">
                 <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
                 <li><Link href="/become-a-pro" className="hover:text-white transition-colors">Become a Pro</Link></li>
+                <li><Link href="/pricing" className="hover:text-white transition-colors">Pricing</Link></li>
+                <li><Link href="/reviews" className="hover:text-white transition-colors">Reviews</Link></li>
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Legal</h4>
+              <h4 className="font-semibold mb-4">Locations</h4>
+              <ul className="space-y-2 text-sm text-slate-400">
+                <li><Link href="/house-cleaning-orlando" className="hover:text-white transition-colors">Orlando</Link></li>
+                <li><Link href="/house-cleaning-kissimmee" className="hover:text-white transition-colors">Kissimmee</Link></li>
+                <li><Link href="/house-cleaning-winter-park" className="hover:text-white transition-colors">Winter Park</Link></li>
+                <li><Link href="/house-cleaning-lake-nona" className="hover:text-white transition-colors">Lake Nona</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 pt-8 border-t border-slate-800">
+            <div>
+              <h4 className="font-semibold mb-4 text-sm">Legal</h4>
               <ul className="space-y-2 text-sm text-slate-400">
                 <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>

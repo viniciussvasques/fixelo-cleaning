@@ -6,6 +6,7 @@ import { useBookingStore } from '@/store/booking';
 import Link from 'next/link';
 import { CheckCircle, XCircle, CalendarClock } from 'lucide-react';
 import { RecurringSetup } from '@/components/bookings/recurring-setup';
+import { trackPurchase } from '@/lib/analytics';
 
 function SuccessPageContent() {
     const searchParams = useSearchParams();
@@ -47,7 +48,7 @@ function SuccessPageContent() {
                 });
 
                 const data = await response.json();
-                
+
                 if (!response.ok) {
                     if (data.message === 'Booking already exists') {
                         // Already created, just show success
@@ -60,6 +61,18 @@ function SuccessPageContent() {
 
                 setBookingData(data.booking);
                 setStatus('success');
+
+                // Track purchase conversion in GA4
+                trackPurchase({
+                    transactionId: data.booking.id,
+                    serviceType: data.booking.serviceType?.slug || 'cleaning',
+                    serviceName: data.booking.serviceType?.name || 'Cleaning Service',
+                    totalPrice: data.booking.totalPrice || 0,
+                    bedrooms: data.booking.bedrooms || 2,
+                    bathrooms: data.booking.bathrooms || 1,
+                    paymentMethod: 'card',
+                });
+
                 // Don't reset immediately - we need the data for recurring setup
             } catch (error) {
                 console.error('Save booking error:', error);
@@ -178,15 +191,15 @@ function SuccessPageContent() {
                 </div>
 
                 <div className="space-y-4">
-                    <Link 
-                        href="/dashboard" 
+                    <Link
+                        href="/dashboard"
                         className="block w-full py-3 px-4 bg-gray-900 text-white rounded-lg hover:bg-gray-800 font-semibold transition-colors"
                         onClick={() => reset()}
                     >
                         Go to Dashboard
                     </Link>
-                    <Link 
-                        href="/" 
+                    <Link
+                        href="/"
                         className="block w-full py-3 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
                         onClick={() => reset()}
                     >

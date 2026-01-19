@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { StripeProvider } from '@/components/providers/StripeProvider';
 import { Loader2 } from 'lucide-react';
+import { trackBeginCheckout } from '@/lib/analytics';
 
 function CheckoutForm({ amount }: { amount: number }) {
     const stripe = useStripe();
@@ -182,8 +183,20 @@ export default function CheckoutPage() {
                 throw new Error(errorData.error || 'Failed to create booking');
             }
 
+
             const { clientSecret: secret } = await bookingResponse.json();
             setClientSecret(secret);
+
+            // Track begin_checkout event in GA4
+            trackBeginCheckout({
+                serviceType: foundService?.slug || 'cleaning',
+                serviceName: foundService?.name || 'Cleaning Service',
+                totalPrice: totalPrice,
+                bedrooms: homeDetails?.bedrooms || 1,
+                bathrooms: homeDetails?.bathrooms || 1,
+                addons: addOns,
+            });
+
             setIsLoading(false);
         } catch (error) {
             console.error('Checkout initialization error:', error);
