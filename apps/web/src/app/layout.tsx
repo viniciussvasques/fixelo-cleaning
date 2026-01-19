@@ -105,6 +105,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <head>
+        {/* Facebook Domain Verification */}
+        <meta name="facebook-domain-verification" content="ma7fpi10egajeae2yhbv4r6305prm9" />
+
         {/* Google Analytics */}
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-4QPSL99Z6N"></script>
         <script
