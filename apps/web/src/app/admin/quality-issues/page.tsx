@@ -142,8 +142,8 @@ export default function QualityIssuesPage() {
         if (!search) return true;
         const searchLower = search.toLowerCase();
         return (
-            issue.reporter.email.toLowerCase().includes(searchLower) ||
-            `${issue.reporter.firstName} ${issue.reporter.lastName}`.toLowerCase().includes(searchLower)
+            (issue.reporter?.email || '').toLowerCase().includes(searchLower) ||
+            `${issue.reporter?.firstName || ''} ${issue.reporter?.lastName || ''}`.toLowerCase().includes(searchLower)
         );
     });
 
@@ -292,8 +292,8 @@ export default function QualityIssuesPage() {
                                 filteredIssues.map((issue) => (
                                     <TableRow key={issue.id}>
                                         <TableCell>
-                                            <div className="font-medium">{issue.reporter.firstName} {issue.reporter.lastName}</div>
-                                            <div className="text-xs text-muted-foreground">{issue.reporter.email}</div>
+                                            <div className="font-medium">{issue.reporter?.firstName || 'Unknown'} {issue.reporter?.lastName || ''}</div>
+                                            <div className="text-xs text-muted-foreground">{issue.reporter?.email || 'No email'}</div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="text-sm">{issue.booking.serviceType.name}</div>
@@ -354,7 +354,7 @@ export default function QualityIssuesPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-3 bg-slate-50 rounded-lg">
                                         <p className="text-xs text-muted-foreground">Customer</p>
-                                        <p className="font-medium">{selectedIssue.reporter.firstName} {selectedIssue.reporter.lastName}</p>
+                                        <p className="font-medium">{selectedIssue.reporter?.firstName || 'Unknown'} {selectedIssue.reporter?.lastName || ''}</p>
                                     </div>
                                     <div className="p-3 bg-slate-50 rounded-lg">
                                         <p className="text-xs text-muted-foreground">Booking Value</p>
