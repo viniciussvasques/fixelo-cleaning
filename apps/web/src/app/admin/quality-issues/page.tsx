@@ -296,14 +296,14 @@ export default function QualityIssuesPage() {
                                             <div className="text-xs text-muted-foreground">{issue.reporter?.email || 'No email'}</div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="text-sm">{issue.booking.serviceType.name}</div>
-                                            <div className="text-xs text-muted-foreground">{formatCurrency(issue.booking.totalPrice)}</div>
+                                            <div className="text-sm">{issue.booking?.serviceType?.name || 'N/A'}</div>
+                                            <div className="text-xs text-muted-foreground">{formatCurrency(issue.booking?.totalPrice || 0)}</div>
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">{issue.issueType.replace(/_/g, ' ')}</Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {issue.booking.assignments[0]?.cleaner?.user ? (
+                                            {issue.booking?.assignments?.[0]?.cleaner?.user ? (
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-sm">
                                                         {issue.booking.assignments[0].cleaner.user.firstName}
@@ -358,7 +358,7 @@ export default function QualityIssuesPage() {
                                     </div>
                                     <div className="p-3 bg-slate-50 rounded-lg">
                                         <p className="text-xs text-muted-foreground">Booking Value</p>
-                                        <p className="font-medium">{formatCurrency(selectedIssue.booking.totalPrice)}</p>
+                                        <p className="font-medium">{formatCurrency(selectedIssue.booking?.totalPrice || 0)}</p>
                                     </div>
                                 </div>
 
@@ -373,7 +373,7 @@ export default function QualityIssuesPage() {
                                 </div>
 
                                 {/* Cleaner Info */}
-                                {selectedIssue.booking.assignments[0]?.cleaner?.user && (
+                                {selectedIssue.booking?.assignments?.[0]?.cleaner?.user && (
                                     <div className="p-3 border rounded-lg">
                                         <div className="flex items-center justify-between">
                                             <div>
@@ -415,13 +415,13 @@ export default function QualityIssuesPage() {
                                                 <p className="text-sm font-medium mb-2">Refund Amount</p>
                                                 <Input
                                                     type="number"
-                                                    value={resolution.type === 'FULL_REFUND' ? selectedIssue.booking.totalPrice : resolution.refundAmount}
+                                                    value={resolution.type === 'FULL_REFUND' ? (selectedIssue.booking?.totalPrice || 0) : resolution.refundAmount}
                                                     onChange={(e) => setResolution(prev => ({ ...prev, refundAmount: parseFloat(e.target.value) }))}
                                                     disabled={resolution.type === 'FULL_REFUND'}
                                                 />
                                                 {resolution.type === 'PARTIAL_REFUND' && (
                                                     <p className="text-xs text-muted-foreground mt-1">
-                                                        Suggested: {formatCurrency(selectedIssue.booking.totalPrice * 0.3)} (30%)
+                                                        Suggested: {formatCurrency((selectedIssue.booking?.totalPrice || 0) * 0.3)} (30%)
                                                     </p>
                                                 )}
                                             </div>
